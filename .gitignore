@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+client/dist/
+bridge/dist/
+
+# Vite
+client/.vite/
+
+# Go binaries
+bridge/bridge
+bridge/bridge-linux
+bridge/bridge-mac
+bridge/bridge-mac-arm64
+bridge/bridge.exe
+
+# OS / editor artefacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local

@@ -1,0 +1,23 @@
+{
+  "name": "braille-vibe",
+  "version": "0.1.0",
+  "description": "Braille Vibe — Braille editing and embossing suite (monorepo root)",
+  "private": true,
+  "workspaces": [
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=client",
+    "build": "npm run build --workspace=client",
+    "preview": "npm run preview --workspace=client",
+    "lint": "npm run lint --workspace=client",
+    "bridge:build:linux": "cd bridge && GOOS=linux GOARCH=amd64 go build -o dist/bridge-linux .",
+    "bridge:build:mac": "cd bridge && GOOS=darwin GOARCH=amd64 go build -o dist/bridge-mac .",
+    "bridge:build:mac:arm": "cd bridge && GOOS=darwin GOARCH=arm64 go build -o dist/bridge-mac-arm64 .",
+    "bridge:build:windows": "cd bridge && GOOS=windows GOARCH=amd64 go build -o dist/bridge.exe .",
+    "bridge:dev": "cd bridge && go run ."
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
