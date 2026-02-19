@@ -29,6 +29,14 @@ Browsers cannot send raw bytes to USB printers (required for embossers). We will
 - `/bridge` (Go App)
 - `.github/workflows` (CI/CD)
 
+### 4. The Math Pipeline (Critical)
+The translation pipeline for math must follow this strict order:
+1. **Extraction:** Regex identify content between `$$...$$` (block) and `\(...\)` (inline).
+2. **Conversion:** Pass that LaTeX string to **MathJax** (configured to output **MathML**).
+3. **Cleaning:** Strip the MathJax-specific XML headers (LibLouis is picky).
+4. **Translation:** Pass the clean MathML string to `liblouis-js` using the `nemeth.ctb` table.
+5. **Re-insertion:** Replace the original LaTeX placeholders with the returned Nemeth Braille ASCII.
+
 ## User Flow
 1. User opens Web App.
 2. Typles/Pastes text or LaTeX.
