@@ -10,9 +10,9 @@ export default defineConfig({
   base: process.env.VITE_BASE_URL ?? '/GrahamBrailleWriter/',
 
   worker: {
-    // Use IIFE (classic) workers so importScripts() is available inside
-    // the braille worker to load the liblouis Emscripten build at runtime.
-    format: 'iife',
+    // ES module workers allow static/dynamic imports and fetch()-based loading
+    // instead of importScripts(). Required for the WASM-ready braille worker.
+    format: 'es',
   },
 
   optimizeDeps: {

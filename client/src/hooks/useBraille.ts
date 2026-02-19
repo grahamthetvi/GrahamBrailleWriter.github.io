@@ -5,8 +5,12 @@
  *   const { translate, translatedText, isLoading, error } = useBraille();
  *   translate('Hello world');   // dispatches to the worker
  *
- * The worker runs liblouis in an IIFE classic worker (not a module worker).
- * This means the worker URL must NOT be created with { type: 'module' }.
+ * The worker is an ES module worker (Vite worker format: 'es').
+ * Message protocol matches braille.worker.ts:
+ *   send    → { text: string, table?: BrailleTable }
+ *   receive → { type: 'READY' }
+ *             { type: 'RESULT', result: string }
+ *             { type: 'ERROR',  error:  string }
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -38,26 +42,27 @@ export function useBraille(): UseBrailleReturn {
   // Spawn / tear down the worker
   // -------------------------------------------------------------------------
   useEffect(() => {
-    // Classic IIFE worker — do NOT pass { type: 'module' }.
+    // Module worker — matches vite.config.ts `worker: { format: 'es' }`.
     const worker = new Worker(
       new URL('../workers/braille.worker.ts', import.meta.url),
+      { type: 'module' },
     );
 
     worker.addEventListener('message', (e: MessageEvent) => {
-      const { type, payload } = e.data as {
-        type: string;
-        payload?: { brf?: string; message?: string };
-      };
+      const msg = e.data as
+        | { type: 'READY' }
+        | { type: 'RESULT'; result: string }
+        | { type: 'ERROR';  error:  string };
 
-      if (type === 'READY') {
+      if (msg.type === 'READY') {
         setWorkerReady(true);
         setIsLoading(false);
-      } else if (type === 'RESULT') {
-        setTranslatedText(payload?.brf ?? '');
+      } else if (msg.type === 'RESULT') {
+        setTranslatedText(msg.result);
         setIsLoading(false);
         setError(null);
-      } else if (type === 'ERROR') {
-        setError(payload?.message ?? 'Unknown error from braille worker');
+      } else if (msg.type === 'ERROR') {
+        setError(msg.error);
         setIsLoading(false);
       }
     });
@@ -81,7 +86,7 @@ export function useBraille(): UseBrailleReturn {
     if (!workerRef.current) return;
     setIsLoading(true);
     setError(null);
-    workerRef.current.postMessage({ type: 'TRANSLATE', payload: { text, table } });
+    workerRef.current.postMessage({ text, table });
   }, []);
 
   return { translate, translatedText, isLoading, error, workerReady };

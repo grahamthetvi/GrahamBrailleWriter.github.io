@@ -8,10 +8,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "postinstall": "node scripts/setup-liblouis.js",
     "setup:liblouis": "node scripts/setup-liblouis.js"
   },
   "dependencies": {
-    "liblouis": "^0.4.0",
+    "@monaco-editor/react": "^4.7.0",
+    "liblouis-js": "^0.2.0",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

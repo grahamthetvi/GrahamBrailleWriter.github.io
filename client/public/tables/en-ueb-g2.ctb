@@ -28,7 +28,7 @@
 
 include en-ueb-g1.ctb
 
-multind 56-6 nocontractsign capsletter
+multind 56-6 letsign capsletter
 
 seqdelimiter -—
 seqdelimiter ‐   \x2010
@@ -500,7 +500,7 @@ always enough 26-1256-126
 
 # his
 match %[^_]|%[^_~]%<*[([{] his %[^_]|[;:)}\\]]%>*%[^_~] 236
-nofor lowword his 236
+nofor always his 236
 
 # in
 match %[^_]!%[_1]* in !%[_1]*%[^_] 35
@@ -508,11 +508,11 @@ nofor always in 35
 
 # was
 match %[^_]|%[^_~]%<*[([{] was %[^_]|[;:)}\\]]%>*%[^_~] 356
-nofor lowword was 356
+nofor always was 356
 
 # were
 match %[^_]|%[^_~]%<*[([{] were %[^_]|[;:)}\\]]%>*%[^_~] 2356
-nofor lowword were 2356
+nofor always were 2356
 
 
 #   10.6   Lower Groupsigns
@@ -566,12 +566,12 @@ word beg =
 # bb   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a bb %a 23
 
-nofor midword bb 23
+nofor always bb 23
 
 # cc   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a cc %a 25
 
-nofor midword cc 25
+nofor always cc 25
 
 sufword arccosine 345-14-14-135-234-35-15
 sufword bacchanal 12-1-14-16-1-1345-1-123
@@ -664,7 +664,7 @@ sufword turtleneck 2345-136-1235-2345-123-15-1345-15-14-13
 # ff   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a ff %a 235
 
-nofor midword ff 235
+nofor always ff 235
 
 sufword afford 1-124-123456-145
 sufword afforest 1-124-123456-15-34
@@ -675,7 +675,7 @@ sufword stafford 34-1-124-123456-145
 # gg   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a gg %a 2356
 
-nofor midword gg 2356
+nofor always gg 2356
 
 # in   10.6.8
 match !%[_1]%1* in - 35
@@ -1358,8 +1358,8 @@ nofor word himself's  125-134-124-3-234
 nofor word immediate's  24-134-134-3-234
 nofor word its's  1346-234-3-234
 nofor word itself's  1346-124-3-234
-nofor word letter's  123-1235-3-234   10.9.3-3-234
-nofor word little's  123-123-3-234   10.9.3-3-234
+nofor word letter's  123-1235   10.9.3-3-234
+nofor word little's  123-123   10.9.3-3-234
 nofor word much's  134-16-3-234
 nofor word must's  134-34-3-234
 nofor word myself's  134-13456-124-3-234
@@ -3738,13 +3738,3 @@ match %[_~^]%<* unsaid ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-234-145
 
 word rared 1235-1-1235-1246
 word firedrill 124-24-1235-15-145-1235-24-123-123
-
-# Shape symbols require a grade 1 indicator (Section 3.22.1)
-contraction \x25a0 ■ filled (solid) square
-contraction \x25a1 □ square
-contraction \x25a7 ▧ shaded square (upper left to lower right)
-contraction \x25b2 ▲ filled (solid) (equilateral) triangle
-contraction \x25b3 △ regular (equilateral) triangle
-contraction \x25cb ○ circle
-contraction \x25cd ◍ shaded circle
-

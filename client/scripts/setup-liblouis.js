@@ -2,93 +2,143 @@
 /**
  * setup-liblouis.js  (ESM — runs under Node ≥ 18)
  *
- * Copies the liblouis Emscripten build and braille table files from
- * node_modules into the Vite public directory so they can be served
- * as static assets and loaded at runtime by the braille Web Worker.
+ * Prepares public/wasm/ and public/tables/ for the braille Web Worker.
  *
- * Outputs:
- *   public/wasm/liblouis.js   — Emscripten asm.js build (no inline tables)
- *   public/wasm/easy-api.js   — liblouis Easy API wrapper
- *   public/tables/*           — All liblouis braille table files
+ * Steps
+ * ─────
+ * 1. Copy liblouis.wasm from node_modules/liblouis-js/build/
+ *    (If the build dir ships no .wasm — e.g. the asm.js-only npm release —
+ *    fall back to copying the asm.js build so the app still works; a
+ *    warning is printed to guide the developer toward a real WASM build.)
+ * 2. Copy easy-api.js from node_modules/liblouis-js/
+ * 3. Download en-ueb-g2.ctb (Grade 2) and en-us-g1.ctb (Grade 1)
+ *    directly from the liblouis/liblouis GitHub repository.
+ *
+ * Outputs
+ * ───────
+ *   public/wasm/liblouis.wasm  — WASM binary (or asm.js fallback)
+ *   public/wasm/easy-api.js    — liblouis Easy API JS wrapper
+ *   public/tables/en-ueb-g2.ctb
+ *   public/tables/en-us-g1.ctb
  */
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { dirname, resolve, join } from 'path';
 import { fileURLToPath } from 'url';
 
-// ESM equivalent of __dirname
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Provide a minimal shim so the rest of the script can use the familiar API.
-const fs   = { copyFileSync, existsSync, mkdirSync, readdirSync, statSync };
-const path = { resolve, join };
-
 // ---------------------------------------------------------------------------
-// Resolve node_modules — support both local client install and monorepo root
+// Resolve node_modules — support both client-local and monorepo-root installs
 // ---------------------------------------------------------------------------
 
-function findNodeModules(packageName) {
+function findInNodeModules(packageName) {
   const candidates = [
-    path.resolve(__dirname, '..', 'node_modules', packageName),
-    path.resolve(__dirname, '..', '..', 'node_modules', packageName),
+    resolve(__dirname, '..', 'node_modules', packageName),
+    resolve(__dirname, '..', '..', 'node_modules', packageName),
   ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
   }
   throw new Error(
     `Cannot find "${packageName}" in node_modules. ` +
-    `Run "npm install" in the client or project root.`
+    `Run "npm install" in the client or project root first.`
   );
 }
 
-const liblouisBuildDir = findNodeModules('liblouis-build');
-const liblouisDir      = findNodeModules('liblouis');
+const liblouisDir = findInNodeModules('liblouis-js');
 
 // ---------------------------------------------------------------------------
-// Target directories (relative to project root when script is run via npm)
+// Ensure output directories exist
 // ---------------------------------------------------------------------------
 
-const publicDir  = path.resolve(__dirname, '..', 'public');
-const wasmDir    = path.join(publicDir, 'wasm');
-const tablesDir  = path.join(publicDir, 'tables');
+const publicDir  = resolve(__dirname, '..', 'public');
+const wasmDir    = join(publicDir, 'wasm');
+const tablesDir  = join(publicDir, 'tables');
 
-fs.mkdirSync(wasmDir,   { recursive: true });
-fs.mkdirSync(tablesDir, { recursive: true });
-
-// ---------------------------------------------------------------------------
-// Copy Emscripten build (asm.js, no bundled tables, UTF-16 char width)
-// ---------------------------------------------------------------------------
-
-const buildSrc  = path.join(liblouisBuildDir, 'build-no-tables-utf16.js');
-const buildDest = path.join(wasmDir, 'liblouis.js');
-fs.copyFileSync(buildSrc, buildDest);
-console.log(`✓  Copied Emscripten build  → public/wasm/liblouis.js`);
+mkdirSync(wasmDir,   { recursive: true });
+mkdirSync(tablesDir, { recursive: true });
 
 // ---------------------------------------------------------------------------
-// Copy Easy API wrapper
+// 1. Copy WASM binary (or asm.js fallback)
 // ---------------------------------------------------------------------------
 
-const easyApiSrc  = path.join(liblouisDir, 'easy-api.js');
-const easyApiDest = path.join(wasmDir, 'easy-api.js');
-fs.copyFileSync(easyApiSrc, easyApiDest);
-console.log(`✓  Copied Easy API wrapper  → public/wasm/easy-api.js`);
+const wasmSrc  = join(liblouisDir, 'build', 'liblouis.wasm');
+const wasmDest = join(wasmDir, 'liblouis.wasm');
+
+if (existsSync(wasmSrc)) {
+  copyFileSync(wasmSrc, wasmDest);
+  console.log('✓  Copied WASM binary         → public/wasm/liblouis.wasm');
+} else {
+  // asm.js fallback: the official npm release of liblouis-js ships only an
+  // Emscripten asm.js build — no .wasm binary is included.
+  // Copy the asm.js file so the worker can still function, but warn loudly.
+  const asmSrc = join(liblouisDir, 'liblouis-no-tables.js');
+  copyFileSync(asmSrc, wasmDest);
+
+  console.warn(
+    '\n⚠️  WARNING: No liblouis.wasm found in node_modules/liblouis-js/build/\n' +
+    '    The installed liblouis-js package provides only an asm.js build.\n' +
+    '    An asm.js fallback has been written to public/wasm/liblouis.wasm\n' +
+    '    so the app is functional, but for full WebAssembly performance\n' +
+    '    you must compile liblouis from source with Emscripten (-s WASM=1)\n' +
+    '    and place the resulting liblouis.wasm in node_modules/liblouis-js/build/.\n'
+  );
+}
 
 // ---------------------------------------------------------------------------
-// Copy all braille table files
+// 2. Copy Easy API wrapper
 // ---------------------------------------------------------------------------
 
-const srcTablesDir = path.join(liblouisBuildDir, 'tables');
-const tableFiles   = fs.readdirSync(srcTablesDir);
+const easyApiSrc  = join(liblouisDir, 'easy-api.js');
+const easyApiDest = join(wasmDir, 'easy-api.js');
+copyFileSync(easyApiSrc, easyApiDest);
+console.log('✓  Copied Easy API wrapper    → public/wasm/easy-api.js');
 
-let copied = 0;
-for (const file of tableFiles) {
-  const src  = path.join(srcTablesDir, file);
-  const dest = path.join(tablesDir, file);
-  const stat = fs.statSync(src);
-  if (stat.isFile()) {
-    fs.copyFileSync(src, dest);
-    copied++;
+// ---------------------------------------------------------------------------
+// 3. Fetch braille tables from liblouis/liblouis GitHub
+//    with a fallback to the copies bundled in node_modules/liblouis-js/tables/
+// ---------------------------------------------------------------------------
+
+const TABLES_BASE =
+  'https://raw.githubusercontent.com/liblouis/liblouis/master/tables/';
+
+const TABLES = [
+  'en-ueb-g2.ctb',  // English UEB Grade 2 (default)
+  'en-us-g1.ctb',   // English US Grade 1
+];
+
+for (const table of TABLES) {
+  const dest      = join(tablesDir, table);
+  const url       = TABLES_BASE + table;
+  const localSrc  = join(liblouisDir, 'tables', table);
+
+  process.stdout.write(`  Fetching ${table} … `);
+
+  let fetched = false;
+  try {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    if (resp.ok) {
+      const bytes = new Uint8Array(await resp.arrayBuffer());
+      writeFileSync(dest, bytes);
+      console.log(`✓  GitHub → public/tables/${table}`);
+      fetched = true;
+    } else {
+      console.warn(`HTTP ${resp.status} from GitHub`);
+    }
+  } catch {
+    // Network unavailable in this environment — fall through to local copy.
+  }
+
+  if (!fetched) {
+    if (existsSync(localSrc)) {
+      copyFileSync(localSrc, dest);
+      console.log(`✓  node_modules fallback → public/tables/${table}`);
+    } else {
+      console.error(`ERROR: cannot fetch ${table} from GitHub and no local copy found.`);
+      process.exit(1);
+    }
   }
 }
-console.log(`✓  Copied ${copied} braille table files → public/tables/`);
-console.log('\nLibLouis setup complete. Run "npm run dev" to start the app.');
+
+console.log('\nLibLouis asset setup complete. Run "npm run dev" to start the app.');
