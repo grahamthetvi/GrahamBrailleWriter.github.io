@@ -4,6 +4,7 @@ import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille } from './hooks/useBraille';
+import { asciiToUnicodeBraille } from './utils/braille';
 import './App.css';
 
 /**
@@ -138,9 +139,14 @@ export default function App() {
               fontFamily: 'monospace',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
+              fontSize: '1.2rem',
             }}
           >
-            {testOutput}
+            {asciiToUnicodeBraille(testOutput)}
+            <br />
+            <span style={{ fontSize: '0.9rem', color: '#888' }}>
+              (Raw ASCII BRF: {testOutput})
+            </span>
           </pre>
         )}
       </section>
@@ -155,7 +161,7 @@ export default function App() {
           <section className="brf-preview">
             <h2>BRF Preview</h2>
             <pre className="brf-output">
-              {translatedText || '(start typing to see Braille output)'}
+              {translatedText ? asciiToUnicodeBraille(translatedText) : '(start typing to see Braille output)'}
             </pre>
           </section>
 
