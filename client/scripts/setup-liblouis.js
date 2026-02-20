@@ -22,7 +22,7 @@
  *   public/tables/en-us-g1.ctb
  */
 
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { dirname, resolve, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -87,58 +87,52 @@ if (existsSync(wasmSrc)) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Copy Easy API wrapper
+// 2. Copy and Patch Easy API wrapper
 // ---------------------------------------------------------------------------
 
 const easyApiSrc = join(liblouisDir, 'easy-api.js');
 const easyApiDest = join(wasmDir, 'easy-api.js');
-copyFileSync(easyApiSrc, easyApiDest);
-console.log('✓  Copied Easy API wrapper    → public/wasm/easy-api.js');
+
+let easyApiScript = readFileSync(easyApiSrc, 'utf8');
+
+// Patch double-initialization bug: preserve the JS callback reference
+// so subsequent calls to setLiblouisBuild don't erroneously pass an integer
+// pointer back into registerLogCallback.
+easyApiScript = easyApiScript.replace(
+  'liblouis.registerLogCallback(liblouis._log_callback_fn_pointer);',
+  'liblouis.registerLogCallback(liblouis._log_callback_js_fn || null);'
+);
+easyApiScript = easyApiScript.replace(
+  'liblouis._log_callback_fn_pointer = capi.Runtime.addFunction(function(logLvl, msg) {',
+  `liblouis._log_callback_js_fn = fn;
+	liblouis._log_callback_fn_pointer = capi.Runtime.addFunction(function(logLvl, msg) {`
+);
+
+writeFileSync(easyApiDest, easyApiScript);
+console.log('✓  Copied & Patched Easy API wrapper → public/wasm/easy-api.js');
 
 // ---------------------------------------------------------------------------
-// 3. Fetch braille tables from liblouis/liblouis GitHub
-//    with a fallback to the copies bundled in node_modules/liblouis-js/tables/
+// 3. Copy ALL braille tables bundled in node_modules/liblouis-js/tables/
+//    to ensure dependencies (like en-ueb-g1.ctb and braille-patterns.cti) 
+//    are available at runtime.
 // ---------------------------------------------------------------------------
 
-const TABLES_BASE =
-  'https://raw.githubusercontent.com/liblouis/liblouis/master/tables/';
+import { readdirSync } from 'fs';
 
-const TABLES = [
-  'en-ueb-g2.ctb',  // English UEB Grade 2 (default)
-  'en-us-g1.ctb',   // English US Grade 1
-];
+const localTablesDir = join(liblouisDir, 'tables');
+const files = readdirSync(localTablesDir);
 
-for (const table of TABLES) {
-  const dest = join(tablesDir, table);
-  const url = TABLES_BASE + table;
-  const localSrc = join(liblouisDir, 'tables', table);
-
-  process.stdout.write(`  Fetching ${table} … `);
-
-  let fetched = false;
-  try {
-    const resp = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-    if (resp.ok) {
-      const bytes = new Uint8Array(await resp.arrayBuffer());
-      writeFileSync(dest, bytes);
-      console.log(`✓  GitHub → public/tables/${table}`);
-      fetched = true;
-    } else {
-      console.warn(`HTTP ${resp.status} from GitHub`);
-    }
-  } catch {
-    // Network unavailable in this environment — fall through to local copy.
-  }
-
-  if (!fetched) {
-    if (existsSync(localSrc)) {
-      copyFileSync(localSrc, dest);
-      console.log(`✓  node_modules fallback → public/tables/${table}`);
-    } else {
-      console.error(`ERROR: cannot fetch ${table} from GitHub and no local copy found.`);
-      process.exit(1);
-    }
+let copied = 0;
+for (const file of files) {
+  // Only copy actual table files to avoid copying Makefiles or READMEs
+  if (file.endsWith('.ctb') || file.endsWith('.cti') || file.endsWith('.uti') || file.endsWith('.dis') || file.endsWith('.tbl')) {
+    const src = join(localTablesDir, file);
+    const dest = join(tablesDir, file);
+    copyFileSync(src, dest);
+    copied++;
   }
 }
 
-console.log('\nLibLouis asset setup complete. Run "npm run dev" to start the app.');
+console.log(`✓  Copied ${copied} braille tables  → public/tables/`);
+
+console.log('\\nLibLouis asset setup complete. Run "npm run dev" to start the app.');

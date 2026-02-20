@@ -34,7 +34,17 @@ async function initLiblouis() {
     const factory = (liblouisModule as any).default || liblouisModule;
 
     // liblouis-js exposes an async factory; initialise with the WASM blob URL.
-    const instance = await factory({ wasmBinaryFile: '/liblouis.wasm' });
+    const instance = await factory({ wasmBinaryFile: '/Graham_Braille_Editor/liblouis.wasm' });
+
+    // CRITICAL: We MUST tell liblouis-js where to download tables from.
+    // Otherwise it fetches them relative to this worker script (e.g. 
+    // /src/services/en-ueb-g2.ctb) which causes a 404 and Vite serves 
+    // index.html, causing liblouis to crash parsing HTML as braille rules!
+    const BASE = location.origin + '/Graham_Braille_Editor/tables/';
+    if (instance.enableOnDemandTableLoading) {
+      instance.enableOnDemandTableLoading(BASE);
+    }
+
     translateFn = (table: string, text: string) =>
       instance.translateString(table, text) as string;
 
