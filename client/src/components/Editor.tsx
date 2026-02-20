@@ -4,6 +4,8 @@ import * as monaco from 'monaco-editor';
 interface EditorProps {
   onTextChange: (text: string) => void;
   initialValue?: string;
+  /** Called once with the raw Monaco editor instance for scroll-sync wiring. */
+  onEditorReady?: (editor: monaco.editor.IStandaloneCodeEditor) => void;
 }
 
 /**
@@ -11,7 +13,7 @@ interface EditorProps {
  * Stores the editor value in a ref (not state) to avoid re-render storms
  * on every keystroke. Debounces translation calls by 500ms.
  */
-export function Editor({ onTextChange, initialValue = '' }: EditorProps) {
+export function Editor({ onTextChange, initialValue = '', onEditorReady }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,6 +32,8 @@ export function Editor({ onTextChange, initialValue = '' }: EditorProps) {
       scrollBeyondLastLine: false,
       automaticLayout: true,
     });
+
+    if (onEditorReady) onEditorReady(editorRef.current);
 
     editorRef.current.onDidChangeModelContent(() => {
       const text = editorRef.current?.getValue() ?? '';

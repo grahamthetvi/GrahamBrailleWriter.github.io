@@ -20,143 +20,256 @@ body {
   max-width: 100%;
   padding: 0;
   text-align: left;
+  overflow: hidden;
 }
 
-/* Header */
+/* ── Header / toolbar ─────────────────────────────────────────────────────── */
+
 .app-header {
-  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1.25rem;
   background: #16213e;
   border-bottom: 1px solid #0f3460;
-  display: flex;
-  align-items: baseline;
+  flex-shrink: 0;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.app-header h1 {
+.app-header__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.app-header__brand h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   color: #e94560;
+  white-space: nowrap;
 }
 
 .subtitle {
   margin: 0;
-  font-size: 0.85rem;
-  color: #888;
+  font-size: 0.8rem;
+  color: #777;
+  white-space: nowrap;
 }
 
-/* Main two-pane layout */
+.app-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* ── Table selector ───────────────────────────────────────────────────────── */
+
+.table-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.table-selector__label {
+  font-size: 0.8rem;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.table-selector__select {
+  padding: 0.3rem 0.6rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  min-width: 220px;
+  max-width: 300px;
+}
+
+.table-selector__select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.table-selector__select:focus {
+  outline: 2px solid #e94560;
+  outline-offset: 1px;
+}
+
+/* ── Worker status pill ───────────────────────────────────────────────────── */
+
+.worker-status {
+  font-size: 0.78rem;
+  font-family: monospace;
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+
+/* ── Error banner ─────────────────────────────────────────────────────────── */
+
+.error-banner {
+  padding: 0.5rem 1.25rem;
+  background: #2d0e0e;
+  border-bottom: 1px solid #7f1d1d;
+  color: #fca5a5;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* ── Main two-pane layout ─────────────────────────────────────────────────── */
+
 .app-main {
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0;  /* required for flex children to shrink below content size */
 }
 
+/* Left pane — text input */
 .editor-pane {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
-.editor-pane h2 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #888;
+/* Thin vertical divider */
+.pane-divider {
+  width: 4px;
+  background: #0f3460;
+  flex-shrink: 0;
 }
 
-.side-pane {
-  width: 340px;
-  min-width: 280px;
+/* Right pane — BRF output + print panel */
+.output-pane {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #0f3460;
-  overflow-y: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* BRF Preview */
-.brf-preview {
-  padding: 1rem;
+/* Pane title bar */
+.pane-label {
+  padding: 0.3rem 0.75rem;
+  background: #16213e;
   border-bottom: 1px solid #0f3460;
-}
-
-.brf-preview h2 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #888;
+  letter-spacing: 0.07em;
+  color: #778;
+  flex-shrink: 0;
 }
 
-.brf-output {
-  margin: 0;
-  padding: 0.75rem;
-  background: #0d1117;
-  border: 1px solid #30363d;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 1.2rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 200px;
-  overflow-y: auto;
-  color: #58a6ff;
+.pane-label__meta {
+  font-size: 0.7rem;
+  color: #555;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-/* Print Panel */
-.print-panel {
-  padding: 1rem;
+/* ── Braille output (BrailleOutput component) ─────────────────────────────── */
+
+.braille-output-wrapper {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.braille-output-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Progress bar ─────────────────────────────────────────────────────────── */
+
+.braille-progress-bar {
+  height: 3px;
+  background: #1a2744;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.braille-progress-bar__fill {
+  height: 100%;
+  background: #e94560;
+  transition: width 0.15s ease-out;
+  min-width: 0;
+}
+
+/* Shimmer for indeterminate state (engine loading) */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); width: 40%; }
+  50%  { transform: translateX(150%);  width: 40%; }
+  100% { transform: translateX(150%);  width: 40%; }
+}
+
+/* ── Print Panel ──────────────────────────────────────────────────────────── */
+
+.print-panel {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid #0f3460;
+  background: #16213e;
+  flex-shrink: 0;
 }
 
 .print-panel h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: #e0e0e0;
 }
 
 .bridge-warning {
   margin: 0;
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.6rem;
   background: #2d1b0e;
   border: 1px solid #b45309;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #fbbf24;
 }
 
 .print-panel label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #aaa;
 }
 
-.print-panel input[type="text"] {
+.print-panel input[type='text'] {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.6rem;
   background: #0d1117;
   border: 1px solid #30363d;
   border-radius: 4px;
   color: #e0e0e0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
-.print-panel input[type="text"]:disabled {
-  opacity: 0.5;
+.print-panel input[type='text']:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .print-panel button {
-  padding: 0.6rem 1.25rem;
+  padding: 0.45rem 1rem;
   background: #e94560;
   color: #fff;
   border: none;
   border-radius: 4px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
@@ -174,39 +287,34 @@ body {
 .status-ok {
   margin: 0;
   color: #4ade80;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .status-err {
   margin: 0;
   color: #f87171;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
-/* Status Bar */
+/* ── Status Bar ───────────────────────────────────────────────────────────── */
+
 .status-bar {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  padding: 0.4rem 1rem;
+  padding: 0.3rem 1rem;
   background: #16213e;
   border-top: 1px solid #0f3460;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
+  flex-shrink: 0;
 }
 
 .bridge-indicator {
   font-family: monospace;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
-.bridge-indicator.connected {
-  color: #4ade80;
-}
+.bridge-indicator.connected    { color: #4ade80; }
+.bridge-indicator.disconnected { color: #888; }
 
-.bridge-indicator.disconnected {
-  color: #888;
-}
-
-.brf-stats {
-  color: #666;
-}
+.brf-stats { color: #555; }
