@@ -3,18 +3,27 @@
  * ASCII range: 0x20 to 0x5F (Space to Underscore)
  * Unicode range: U+2800 to U+283F
  */
-export function asciiToUnicodeBraille(asciiString: string): string {
-    // Standard 64-character BRF table mapped to Unicode dot combinations 0-63
-    const brfMap = " A1B'K2L@CIF/MSP\\\"E3H9O6R^DJG>NTQ,*5<-U8V.%[$+X!&*:4\\\\Z7(_?W]#Y)=";
 
+// Precise mapping of ASCII [0x20-0x5F] to Unicode Braille Pattern offsets [U+2800-U+283F]
+const BRF_TO_UNICODE_OFFSETS = [
+    0x00, 0x2E, 0x10, 0x3C, 0x2B, 0x29, 0x2F, 0x04,  // 0x20-0x27: space, !, ", #, $, %, &, '
+    0x37, 0x3E, 0x21, 0x2C, 0x20, 0x24, 0x28, 0x1C,  // 0x28-0x2F: (, ), *, +, ,, -, ., /
+    0x34, 0x02, 0x06, 0x12, 0x32, 0x22, 0x16, 0x36,  // 0x30-0x37: 0, 1, 2, 3, 4, 5, 6, 7
+    0x26, 0x14, 0x31, 0x30, 0x23, 0x3F, 0x0C, 0x39,  // 0x38-0x3F: 8, 9, :, ;, <, =, >, ?
+    0x08, 0x01, 0x03, 0x09, 0x19, 0x11, 0x0B, 0x1B,  // 0x40-0x47: @, A, B, C, D, E, F, G
+    0x13, 0x0A, 0x1A, 0x05, 0x07, 0x0D, 0x1D, 0x15,  // 0x48-0x4F: H, I, J, K, L, M, N, O
+    0x0F, 0x1F, 0x17, 0x0E, 0x1E, 0x25, 0x27, 0x3A,  // 0x50-0x57: P, Q, R, S, T, U, V, W
+    0x2D, 0x3D, 0x35, 0x2A, 0x33, 0x3B, 0x18, 0x38   // 0x58-0x5F: X, Y, Z, [, \, ], ^, _
+];
+
+export function asciiToUnicodeBraille(asciiString: string): string {
     let unicodeStr = "";
     for (let i = 0; i < asciiString.length; i++) {
-        const char = asciiString.charAt(i).toUpperCase();
-        const mapIndex = brfMap.indexOf(char);
+        const charCode = asciiString.charAt(i).toUpperCase().charCodeAt(0);
+        const index = charCode - 0x20;
 
-        if (mapIndex !== -1) {
-            // 0x2800 is the base for Unicode Braille patterns (empty cell)
-            unicodeStr += String.fromCharCode(0x2800 + mapIndex);
+        if (index >= 0 && index < 64) {
+            unicodeStr += String.fromCharCode(0x2800 + BRF_TO_UNICODE_OFFSETS[index]);
         } else {
             // If character is not in the BRF set (e.g., newlines), leave it as is
             unicodeStr += asciiString.charAt(i);
