@@ -95,7 +95,7 @@ async function init(): Promise<void> {
   }
 
   const rawBuffer = await wasmResp.arrayBuffer();
-  const header    = new Uint8Array(rawBuffer, 0, 4);
+  const header = new Uint8Array(rawBuffer, 0, 4);
   const isRealWasm =
     header[0] === 0x00 &&
     header[1] === 0x61 &&
@@ -151,9 +151,108 @@ async function init(): Promise<void> {
   console.info('[braille-worker] ready (isRealWasm =', isRealWasm, ')');
 }
 
+// ─── KaTeX & SRE Imports ──────────────────────────────────────────────────────
+import katex from 'katex';
+// @ts-expect-error - no types available for speech-rule-engine
+import * as sre from 'speech-rule-engine';
+
+// Initialize SRE for Nemeth Braille output once upon first translation
+let sreInitialized = false;
+async function ensureSreReady() {
+  if (sreInitialized) return;
+  await sre.setupEngine({
+    domain: 'nemeth',
+    modality: 'braille',
+    // We don't need spoken output, just the braille ascii
+    locale: 'nemeth',
+  });
+  sreInitialized = true;
+}
+
+// ─── Math Pipeline Helpers ──────────────────────────────────────────────────
+
+/**
+ * Strips the outer <math> tag namespace and display attributes from MathML
+ */
+function cleanMathML(mathml: string): string {
+  // Isolate just the <math>...</math> block, KaTeX wraps it with HTML spans
+  const match = mathml.match(/<math[^>]*>([\s\S]*?)<\/math>/i);
+  if (!match) return mathml;
+
+  // Let's preserve the whole math tag but remove namespaces to be safe
+  let cleaned = `<math>${match[1]}</math>`;
+  return cleaned;
+}
+
+/**
+ * Translates LaTeX math into Nemeth Braille Code
+ */
+async function translateMath(latex: string): Promise<string> {
+  try {
+    // Ensure the engine is booted
+    await ensureSreReady();
+
+    // 1. Convert LaTeX to MathML string
+    const katexHtml = katex.renderToString(latex, {
+      output: 'mathml', // Only give us the MathML
+      throwOnError: false,
+    });
+
+    // 2. Clean the MathML (KaTeX still mixes some HTML in the output sometimes, or at least wrapper spans)
+    const cleanXml = cleanMathML(katexHtml);
+
+    // 3. Translate using Nemeth SRE Engine
+    const result = sre.toSpeech(cleanXml);
+    return result || '';
+  } catch (err) {
+    console.warn('[braille-worker] Math translation failed:', err, latex);
+    return `[Math Error: ${latex}]`;
+  }
+}
+
+/**
+ * Extracts math blocks, translates them, and translates the surrounding text.
+ */
+async function translateDocumentWithMath(text: string, textTable: string): Promise<string> {
+  if (!liblouis) return '';
+
+  // Regex to match block math $$...$$ and inline math \(...\)
+  // We use a unified regex for both
+  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))/gs;
+
+  let result = '';
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mathRegex.exec(text)) !== null) {
+    // Translate the text *before* the math
+    const textBefore = text.slice(lastIndex, match.index);
+    if (textBefore) {
+      result += liblouis.translateString(textTable, textBefore) || '';
+    }
+
+    // Determine which capture group matched (block is match[2], inline is match[4])
+    const latex = match[2] !== undefined ? match[2] : match[4];
+
+    // Translate the math
+    const mathResult = await translateMath(latex);
+    result += mathResult;
+
+    lastIndex = mathRegex.lastIndex;
+  }
+
+  // Translate any remaining text after the last math block
+  const remainingText = text.slice(lastIndex);
+  if (remainingText) {
+    result += liblouis.translateString(textTable, remainingText) || '';
+  }
+
+  return result;
+}
+
 // ─── Message handler ─────────────────────────────────────────────────────────
 
-self.addEventListener('message', (event: MessageEvent) => {
+self.addEventListener('message', async (event: MessageEvent) => {
   const { text, table = 'en-ueb-g2.ctb' } = event.data as {
     text: string;
     table?: string;
@@ -173,10 +272,9 @@ self.addEventListener('message', (event: MessageEvent) => {
   }
 
   try {
-    const result = liblouis.translateString(table, text);
-    if (result === null) {
-      throw new Error(`translateString returned null — check table "${table}"`);
-    }
+    // Check if the nemeth table is loaded on demand if needed, otherwise rely on the base table.
+    // Use the math-aware translation pipeline
+    const result = await translateDocumentWithMath(text, table);
     self.postMessage({ type: 'RESULT', result });
   } catch (err) {
     self.postMessage({
@@ -192,3 +290,4 @@ init().catch((err: unknown) => {
   console.error('[braille-worker] init failed:', msg);
   self.postMessage({ type: 'ERROR', error: `Worker init failed: ${msg}` });
 });
+

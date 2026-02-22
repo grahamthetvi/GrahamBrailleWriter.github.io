@@ -19,7 +19,6 @@ export default defineConfig({
     // Exclude monaco-editor from pre-bundling — it manages its own workers.
     exclude: ['monaco-editor'],
   },
-
   build: {
     rollupOptions: {
       output: {
