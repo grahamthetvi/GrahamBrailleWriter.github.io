@@ -602,6 +602,162 @@ body {
   font-size: 0.78rem;
 }
 
+/* ── Welcome / Onboarding Modal ─────────────────────────────────────────── */
+
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.welcome-modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.welcome-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.welcome-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.welcome-close {
+  padding: 0.25rem 0.55rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.welcome-close:hover {
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+}
+
+.welcome-close:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.welcome-section {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.welcome-section-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+  line-height: 1.4;
+  margin-top: 0.1rem;
+}
+
+.welcome-section h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.welcome-section p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.welcome-section p + p {
+  margin-top: 0.5rem;
+}
+
+.welcome-section p strong {
+  color: var(--text-primary);
+}
+
+.welcome-section code {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.78rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  color: var(--accent);
+}
+
+.welcome-tip {
+  margin-top: 0.6rem !important;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-overlay);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+}
+
+.welcome-footer {
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.welcome-btn-primary {
+  padding: 0.5rem 1.75rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.welcome-btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.welcome-btn-primary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* ── Status Bar ──────────────────────────────────────────────────────────── */
 
 .status-bar {

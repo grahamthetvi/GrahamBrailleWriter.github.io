@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Editor } from './components/Editor';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
+import { WelcomeModal } from './components/WelcomeModal';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille, type MathCode } from './hooks/useBraille';
 import { asciiToUnicodeBraille } from './utils/braille';
@@ -46,6 +47,15 @@ interface PageSettings {
 const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25 };
 
 export default function App() {
+  const [showWelcome, setShowWelcome] = useState(
+    () => !localStorage.getItem('braille-vibe-welcome-seen')
+  );
+
+  function handleWelcomeClose() {
+    localStorage.setItem('braille-vibe-welcome-seen', '1');
+    setShowWelcome(false);
+  }
+
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [selectedTable, setSelectedTable] = useState(DEFAULT_TABLE);
   const [mathCode, setMathCode] = useState<MathCode>('nemeth');
@@ -316,6 +326,16 @@ export default function App() {
           >
             {themeLabels[theme]}
           </button>
+
+          {/* Help / re-open welcome guide */}
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowWelcome(true)}
+            aria-label="Open help guide"
+            title="Open the Getting Started guide"
+          >
+            ?
+          </button>
         </div>
 
         {/* Compact print bar — full-width row below the toolbar */}
@@ -454,6 +474,9 @@ export default function App() {
         isLoading={isLoading}
         progress={progress}
       />
+
+      {/* ── First-visit welcome / onboarding modal ────────────────────── */}
+      {showWelcome && <WelcomeModal onClose={handleWelcomeClose} />}
     </div>
   );
 }
