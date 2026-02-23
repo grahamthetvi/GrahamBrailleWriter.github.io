@@ -3,7 +3,9 @@
    All colors use CSS custom properties defined in index.css.
    ============================================================ */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -366,39 +368,55 @@ body {
 .brf-pages-container {
   flex: 1;
   overflow-y: auto;
-  background: #3c3c3c;
-  padding: 0.75rem 0.4rem;
+  background: var(--bg-surface);
+  padding: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
+  align-items: stretch;
+  gap: 0;
   min-height: 0;
 }
 
 .brf-page {
-  background: var(--page-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  padding: 0.6rem 0.75rem;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 1rem 0 3.5rem;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  position: relative;
+}
+
+.brf-page:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 2rem;
+  right: 2rem;
+  border-bottom: 1px dashed var(--border);
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .brf-page-number {
+  position: absolute;
+  top: 0;
+  right: 1rem;
   font-family: system-ui, sans-serif;
-  font-size: 0.62rem;
-  text-align: center;
-  color: #888;
-  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  text-align: right;
+  color: var(--text-secondary);
   user-select: none;
+  opacity: 0.5;
+  line-height: 24px;
 }
 
 .brf-page-content {
   margin: 0;
   /* Monospace so braille characters line up correctly at cellsPerRow width */
-  font-family: 'Courier New', 'Noto Sans Mono', 'Consolas', monospace;
-  font-size: 1.1rem;
-  line-height: 1.55;
+  font-family: 'Consolas', 'Courier New', 'Noto Sans Mono', monospace;
+  font-size: 16px;
+  line-height: 24px;
   white-space: pre;
   overflow-x: hidden;
   color: var(--braille-color);
@@ -428,7 +446,8 @@ body {
 /* ── Header print bar (compact, full-width row below the toolbar) ──────────── */
 
 .header-print-bar {
-  flex-basis: 100%; /* forces a new row inside the flex-wrap header */
+  flex-basis: 100%;
+  /* forces a new row inside the flex-wrap header */
   display: flex;
   align-items: center;
   gap: 0.5rem;

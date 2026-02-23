@@ -46,6 +46,7 @@ export function Editor({
       rulers: [cellsPerRow],
       minimap: { enabled: false },
       fontSize: 16,
+      lineHeight: 24,
       lineNumbers: 'on',
       scrollBeyondLastLine: false,
       automaticLayout: true,
