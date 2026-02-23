@@ -98,7 +98,7 @@ export default function App() {
   const [showPageSettings, setShowPageSettings] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
 
-  const { translate, translatedText, isLoading, progress, error, workerReady } =
+  const { translate, convertMath, translatedText, isLoading, progress, error, workerReady } =
     useBraille();
 
   // ── Track input stats for the status bar ────────────────────────────────
@@ -133,7 +133,7 @@ export default function App() {
 
   // ── File upload ──────────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Separate state that is only set on file load; passed as `value` to Editor
+  // Separate state that is only set on file load or math conversion; passed as `value` to Editor
   // so Monaco's content is replaced. Kept out of inputText feedback loop.
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
@@ -167,6 +167,19 @@ export default function App() {
     a.download = 'output.brf';
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // ── Convert Math ─────────────────────────────────────────────────────────
+  async function handleConvertMath() {
+    if (!inputText.trim()) return;
+    try {
+      const result = await convertMath(inputText, mathCode);
+      setInputText(result);
+      setFileContent(result);
+      translate(result, selectedTable, mathCode);
+    } catch (err) {
+      console.error('Failed to convert math:', err);
+    }
   }
 
   // ── Paginated braille output ─────────────────────────────────────────────
@@ -252,6 +265,17 @@ export default function App() {
           >
             {workerReady ? '● Ready' : '● Loading…'}
           </span>
+
+          {/* Scan & Convert Math */}
+          <button
+            className="toolbar-btn"
+            onClick={handleConvertMath}
+            disabled={!workerReady || !inputText.trim()}
+            title="Scan text for LaTeX and substitute with braille math"
+            aria-label="Scan text for LaTeX and substitute with braille math"
+          >
+            Scan & Convert Math
+          </button>
 
           {/* File upload — input is screen-reader-hidden; button is the control */}
           <input

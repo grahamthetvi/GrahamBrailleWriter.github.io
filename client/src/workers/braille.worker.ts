@@ -28,6 +28,7 @@
  * Message protocol  (worker → main):
  *   { type: 'READY' }
  *   { type: 'RESULT',   result: string }
+ *   { type: 'CONVERT_MATH_RESULT', result: string }
  *   { type: 'PROGRESS', percent: number }   // 0–100, during chunked jobs
  *   { type: 'ERROR',    error:  string }
  */
@@ -282,12 +283,43 @@ async function translateDocumentWithMath(text: string, textTable: string, mathCo
   return result;
 }
 
-// (Removed duplicate splitIntoChunks function)
+/**
+ * Extracts math blocks, translates them to Braille ASCII, and replaces the math
+ * blocks in the original text, leaving the non-math text untouched.
+ */
+async function convertMathOnly(text: string, mathCode: string): Promise<string> {
+  // Regex to match block math $$...$$ and inline math \(...\)
+  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))/gs;
+
+  let result = '';
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mathRegex.exec(text)) !== null) {
+    // Keep the text *before* the math exactly as it is
+    result += text.slice(lastIndex, match.index);
+
+    // Determine which capture group matched (block is match[2], inline is match[4])
+    const latex = match[2] !== undefined ? match[2] : match[4];
+
+    // Translate the math
+    const mathResult = await translateMath(latex, mathCode);
+    result += mathResult;
+
+    lastIndex = mathRegex.lastIndex;
+  }
+
+  // Append any remaining text after the last math block
+  result += text.slice(lastIndex);
+
+  return result;
+}
 
 // ─── Message handler ─────────────────────────────────────────────────────────
 
 self.addEventListener('message', async (event: MessageEvent) => {
-  const { text, table = 'en-ueb-g2.ctb', mathCode = 'nemeth' } = event.data as {
+  const { type, text, table = 'en-ueb-g2.ctb', mathCode = 'nemeth' } = event.data as {
+    type?: string;
     text: string;
     table?: string;
     mathCode?: string;
@@ -307,7 +339,10 @@ self.addEventListener('message', async (event: MessageEvent) => {
   }
 
   try {
-    if (text.length <= CHUNK_THRESHOLD) {
+    if (type === 'CONVERT_MATH_ONLY') {
+      const result = await convertMathOnly(text, mathCode);
+      self.postMessage({ type: 'CONVERT_MATH_RESULT', result });
+    } else if (text.length <= CHUNK_THRESHOLD) {
       // ── Direct translation (small text) ─────────────────────────────────
       const result = await translateDocumentWithMath(text, table, mathCode);
       self.postMessage({ type: 'RESULT', result });
