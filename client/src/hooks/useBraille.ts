@@ -10,6 +10,7 @@
  *   send    → { text: string, table?: string }
  *   receive → { type: 'READY' }
  *             { type: 'RESULT',   result: string }
+ *             { type: 'CONVERT_MATH_RESULT', result: string }
  *             { type: 'PROGRESS', percent: number }
  *             { type: 'ERROR',    error:  string }
  */
@@ -22,6 +23,8 @@ export type MathCode = 'nemeth' | 'ueb';
 export interface UseBrailleReturn {
   /** Call this with plain text and an optional liblouis table filename and math code. */
   translate: (text: string, table?: string, mathCode?: MathCode) => void;
+  /** Translates only the math portions of the text and returns the new text via a Promise. */
+  convertMath: (text: string, mathCode?: MathCode) => Promise<string>;
   /** The most recent translated BRF string (Braille ASCII). */
   translatedText: string;
   /** True while the worker is initialising or a translation is in flight. */
@@ -39,6 +42,7 @@ export interface UseBrailleReturn {
 
 export function useBraille(): UseBrailleReturn {
   const workerRef = useRef<Worker | null>(null);
+  const convertMathResolvers = useRef<Array<(result: string) => void>>([]);
 
   const [translatedText, setTranslatedText] = useState('');
   const [isLoading, setIsLoading] = useState(true);   // true until READY
@@ -59,6 +63,7 @@ export function useBraille(): UseBrailleReturn {
       const msg = e.data as
         | { type: 'READY' }
         | { type: 'RESULT'; result: string }
+        | { type: 'CONVERT_MATH_RESULT'; result: string }
         | { type: 'PROGRESS'; percent: number }
         | { type: 'ERROR'; error: string };
 
@@ -72,6 +77,9 @@ export function useBraille(): UseBrailleReturn {
         setProgress(100);
         setIsLoading(false);
         setError(null);
+      } else if (msg.type === 'CONVERT_MATH_RESULT') {
+        const resolve = convertMathResolvers.current.shift();
+        if (resolve) resolve(msg.result);
       } else if (msg.type === 'ERROR') {
         setError(msg.error);
         setIsLoading(false);
@@ -98,8 +106,22 @@ export function useBraille(): UseBrailleReturn {
     setIsLoading(true);
     setProgress(0);
     setError(null);
-    workerRef.current.postMessage({ text, table, mathCode });
+    workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode });
   }, []);
 
-  return { translate, translatedText, isLoading, progress, error, workerReady };
+  // -------------------------------------------------------------------------
+  // Public convertMath function
+  // -------------------------------------------------------------------------
+  const convertMath = useCallback((text: string, mathCode: MathCode = 'nemeth'): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (!workerRef.current) {
+        reject(new Error('Worker not ready'));
+        return;
+      }
+      convertMathResolvers.current.push(resolve);
+      workerRef.current.postMessage({ type: 'CONVERT_MATH_ONLY', text, mathCode });
+    });
+  }, []);
+
+  return { translate, convertMath, translatedText, isLoading, progress, error, workerReady };
 }
