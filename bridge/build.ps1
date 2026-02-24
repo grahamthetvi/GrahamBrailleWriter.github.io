@@ -3,7 +3,8 @@ Write-Host "Building Braille Vibe Bridge..."
 Write-Host "Building for Windows (amd64)..."
 $env:GOOS = "windows"
 $env:GOARCH = "amd64"
-go build -o bridge-windows-amd64.exe .
+# -H windowsgui suppresses the console window so only the systray icon appears
+go build -ldflags="-H windowsgui" -o bridge-windows-amd64.exe .
 
 Write-Host "Building for Linux (amd64)..."
 $env:GOOS = "linux"
