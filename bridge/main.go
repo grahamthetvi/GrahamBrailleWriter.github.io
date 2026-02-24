@@ -18,6 +18,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
+	"runtime"
+
+	"fyne.io/systray"
 )
 
 const listenAddr = "127.0.0.1:8080"
@@ -110,12 +114,62 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", withCORS(statusHandler))
-	mux.HandleFunc("/print", withCORS(printHandler))
+	go func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/status", withCORS(statusHandler))
+		mux.HandleFunc("/print", withCORS(printHandler))
 
-	log.Printf("Braille Vibe Bridge listening on http://%s", listenAddr)
-	if err := http.ListenAndServe(listenAddr, mux); err != nil {
-		log.Fatalf("server error: %v", err)
+		log.Printf("Braille Vibe Bridge listening on http://%s", listenAddr)
+		if err := http.ListenAndServe(listenAddr, mux); err != nil {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	systray.Run(onReady, onExit)
+}
+
+func onReady() {
+	systray.SetIcon(iconData)
+	systray.SetTitle("Braille Vibe Bridge")
+	systray.SetTooltip("Braille Vibe HTTP Print Bridge")
+
+	mStatus := systray.AddMenuItem("Status: Running on port 8080", "Bridge is running")
+	mStatus.Disable()
+
+	systray.AddSeparator()
+	mOpen := systray.AddMenuItem("Open Braille Vibe Editor", "Launch the web app")
+	mQuit := systray.AddMenuItem("Quit", "Quit the bridge")
+
+	go func() {
+		for {
+			select {
+			case <-mOpen.ClickedCh:
+				openBrowser("https://grahamthetvi.github.io/Graham_Braille_Editor/")
+			case <-mQuit.ClickedCh:
+				systray.Quit()
+			}
+		}
+	}()
+}
+
+func onExit() {
+	// cleanup if necessary
+	log.Println("Shutting down bridge...")
+}
+
+func openBrowser(url string) {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		log.Printf("Failed to open browser: %v", err)
 	}
 }

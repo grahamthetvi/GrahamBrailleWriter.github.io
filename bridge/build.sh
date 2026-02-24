@@ -5,7 +5,7 @@ echo "Building Braille Vibe Bridge..."
 
 # Build for Windows
 echo "Building for Windows (amd64)..."
-GOOS=windows GOARCH=amd64 go build -o bridge-windows-amd64.exe .
+GOOS=windows GOARCH=amd64 go build -ldflags -H=windowsgui -o bridge-windows-amd64.exe .
 
 # Build for Linux
 echo "Building for Linux (amd64)..."
