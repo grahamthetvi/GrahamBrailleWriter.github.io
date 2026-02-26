@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"time"
 
 	"fyne.io/systray"
 )
@@ -99,8 +100,29 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("print request: printer=%q bytes=%d", req.Printer, len(rawBytes))
 
-	if err := sendToPrinter(req.Printer, rawBytes); err != nil {
-		http.Error(w, fmt.Sprintf("print failed: %v", err), http.StatusInternalServerError)
+	// Capture BRF text (first 4 KB) and hex dump before sending.
+	brfText := string(rawBytes)
+	if len(brfText) > 4096 {
+		brfText = brfText[:4096]
+	}
+
+	printErr := sendToPrinter(req.Printer, rawBytes)
+
+	// Record the job event for the debug UI.
+	e := JobEvent{
+		Time:    time.Now(),
+		Printer: req.Printer,
+		Bytes:   len(rawBytes),
+		BRFText: brfText,
+		HexDump: hexDump(rawBytes),
+	}
+	if printErr != nil {
+		e.ErrMsg = printErr.Error()
+	}
+	appendJob(e)
+
+	if printErr != nil {
+		http.Error(w, fmt.Sprintf("print failed: %v", printErr), http.StatusInternalServerError)
 		return
 	}
 
@@ -118,6 +140,10 @@ func main() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/status", withCORS(statusHandler))
 		mux.HandleFunc("/print", withCORS(printHandler))
+		mux.HandleFunc("/debug", withCORS(handleDebugPage))
+		mux.HandleFunc("/log-stream", withCORS(handleLogStream))
+		mux.HandleFunc("/printers", withCORS(handlePrinters))
+		mux.HandleFunc("/testprint", withCORS(handleTestPrint))
 
 		log.Printf("Graham Bridge listening on http://%s", listenAddr)
 		if err := http.ListenAndServe(listenAddr, mux); err != nil {
@@ -137,12 +163,15 @@ func onReady() {
 	mStatus.Disable()
 
 	systray.AddSeparator()
-	mOpen := systray.AddMenuItem("Open Braille Vibe Editor", "Launch the web app")
+	mDebug := systray.AddMenuItem("Open Debug Page", "View print logs and test the embosser")
+	mOpen := systray.AddMenuItem("Open Graham Bridge Editor", "Launch the web app")
 	mQuit := systray.AddMenuItem("Quit", "Quit the bridge")
 
 	go func() {
 		for {
 			select {
+			case <-mDebug.ClickedCh:
+				openBrowser("http://" + listenAddr + "/debug")
 			case <-mOpen.ClickedCh:
 				openBrowser("https://grahamthetvi.github.io/Graham_Braille_Editor/")
 			case <-mQuit.ClickedCh:

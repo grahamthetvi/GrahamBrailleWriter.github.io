@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -62,7 +64,7 @@ func sendToPrinter(printerName string, data []byte) error {
 	defer procClose.Call(hPrinter) //nolint:errcheck
 
 	// Build DOC_INFO_1 with datatype "RAW".
-	docName, _ := syscall.UTF16PtrFromString("Braille Vibe Job")
+	docName, _ := syscall.UTF16PtrFromString("Graham Bridge Job")
 	datatype, _ := syscall.UTF16PtrFromString("RAW")
 	info := &docInfo1{
 		pDocName:    docName,
@@ -101,4 +103,23 @@ func sendToPrinter(printerName string, data []byte) error {
 	}
 
 	return nil
+}
+
+// listPrinters returns the names of all printers installed on Windows.
+func listPrinters() []string {
+	out, err := exec.Command(
+		"powershell", "-NoProfile", "-NonInteractive", "-Command",
+		"Get-Printer | Select-Object -ExpandProperty Name",
+	).Output()
+	if err != nil {
+		return nil
+	}
+	var result []string
+	for _, line := range strings.Split(string(out), "\n") {
+		name := strings.TrimSpace(line)
+		if name != "" {
+			result = append(result, name)
+		}
+	}
+	return result
 }

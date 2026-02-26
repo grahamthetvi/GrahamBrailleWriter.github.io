@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // sendToPrinter sends raw BRF bytes to the named printer using CUPS (lp).
@@ -33,4 +34,25 @@ func sendToPrinter(printerName string, data []byte) error {
 	}
 
 	return nil
+}
+
+// listPrinters returns printer names visible to CUPS on Linux/macOS.
+func listPrinters() []string {
+	out, err := exec.Command("lpstat", "-a").Output()
+	if err != nil {
+		// Fallback: try lpstat with no args
+		out, err = exec.Command("lpstat").Output()
+		if err != nil {
+			return nil
+		}
+	}
+	var result []string
+	for _, line := range strings.Split(string(out), "\n") {
+		// lpstat -a lines look like: "PrinterName accepting requests..."
+		fields := strings.Fields(line)
+		if len(fields) > 0 {
+			result = append(result, fields[0])
+		}
+	}
+	return result
 }
