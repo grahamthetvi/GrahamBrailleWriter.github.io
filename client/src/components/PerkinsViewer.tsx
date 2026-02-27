@@ -1,24 +1,28 @@
 import { useState } from 'react';
-import { extractDots, asciiToUnicodeBraille } from '../utils/braille';
+import { getStaticDots } from '../utils/staticBraille';
+import '../../PerkinsViewer.css';
 
 interface PerkinsViewerProps {
-    brfText: string;
+    rawText: string;
 }
 
-export function PerkinsViewer({ brfText }: PerkinsViewerProps) {
+export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    // Filter out any carriage returns or newlines that might be in the raw BRF
-    const characters = brfText.replace(/[\r\n]+/g, '').split('');
+    // Filter out any carriage returns or newlines that might be in the raw text
+    // for a pure character-by-character view
+    const characters = rawText.replace(/[\r\n]+/g, '').split('');
 
     const hasContent = characters.length > 0;
-    const currentChar = hasContent ? characters[currentIndex] : '';
-    const currentUnicode = hasContent ? asciiToUnicodeBraille(currentChar) : '';
 
-    // If it's a space, handle it specifically since extractDots might return all false,
-    // but we want to know it's a space for display purposes.
+    // Keep index in bounds if text shrinks
+    if (hasContent && currentIndex >= characters.length) {
+        setCurrentIndex(characters.length - 1);
+    }
+
+    const currentChar = hasContent ? characters[currentIndex] : '';
     const isSpace = currentChar === ' ';
-    const dots = extractDots(currentUnicode);
+    const dots = getStaticDots(currentChar);
 
     const prevChar = () => {
         if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
@@ -31,44 +35,53 @@ export function PerkinsViewer({ brfText }: PerkinsViewerProps) {
     if (!hasContent) {
         return (
             <div className="perkins-viewer empty">
-                <p>Type in the editor or open a file to use the Perkins Translator.</p>
+                <p>Type in the editor or open a file to learn the Perkins Brailler keys.</p>
             </div>
         );
     }
 
-    // Visual layout for standard Perkins Brailler keys
-    // Left side: Dot 3, Dot 2, Dot 1
-    // Right side: Dot 4, Dot 5, Dot 6
+    // Realistic machine aesthetic layout:
+    // - Top: "Paper feed" showing the embossed character in high relief
+    // - Middle: The machine chassis
+    // - Bottom: The mechanical keys curving outward
     return (
         <div className="perkins-viewer">
-            <div className="perkins-header">
-                <h3>Perkins Translator View</h3>
-                <p className="perkins-instruction">Step through the document to see which keys to press.</p>
+
+            {/* Paper Feed Area */}
+            <div className="perkins-paper-feed">
+                <div className="perkins-paper">
+                    <span className="perkins-paper-label">Current Character</span>
+                    <div className="perkins-paper-char">
+                        {isSpace ? '[Space]' : currentChar}
+                    </div>
+                </div>
             </div>
 
-            <div className="perkins-current-character-display">
-                <span className="perkins-label">Current character:</span>
-                <span className="perkins-char">
-                    {isSpace ? '[Space]' : currentChar}
-                </span>
-                <span className="perkins-unicode">{currentUnicode}</span>
-            </div>
-
-            <div className="perkins-keyboard-layout">
-                <div className="perkins-keys-side left-side">
-                    <div className={`perkins-key ${dots[2] ? 'active' : ''}`}><span>Dot 3</span></div>
-                    <div className={`perkins-key ${dots[1] ? 'active' : ''}`}><span>Dot 2</span></div>
-                    <div className={`perkins-key ${dots[0] ? 'active' : ''}`}><span>Dot 1</span></div>
+            {/* Machine Chassis */}
+            <div className="perkins-machine">
+                <div className="perkins-machine-branding">
+                    <div className="perkins-badge">Graham Brailler</div>
                 </div>
 
-                <div className={`perkins-spacebar ${isSpace ? 'active' : ''}`}>
-                    <span>Space</span>
-                </div>
+                {/* Keyboard Layout */}
+                <div className="perkins-keyboard-layout">
 
-                <div className="perkins-keys-side right-side">
-                    <div className={`perkins-key ${dots[3] ? 'active' : ''}`}><span>Dot 4</span></div>
-                    <div className={`perkins-key ${dots[4] ? 'active' : ''}`}><span>Dot 5</span></div>
-                    <div className={`perkins-key ${dots[5] ? 'active' : ''}`}><span>Dot 6</span></div>
+                    <div className="perkins-keys-side left-side">
+                        <button className={`perkins-key key-dot3 ${dots[2] ? 'active' : ''}`}><span>3</span></button>
+                        <button className={`perkins-key key-dot2 ${dots[1] ? 'active' : ''}`}><span>2</span></button>
+                        <button className={`perkins-key key-dot1 ${dots[0] ? 'active' : ''}`}><span>1</span></button>
+                    </div>
+
+                    <button className={`perkins-spacebar ${isSpace ? 'active' : ''}`}>
+                        <div className="spacebar-ridge"></div>
+                    </button>
+
+                    <div className="perkins-keys-side right-side">
+                        <button className={`perkins-key key-dot4 ${dots[3] ? 'active' : ''}`}><span>4</span></button>
+                        <button className={`perkins-key key-dot5 ${dots[4] ? 'active' : ''}`}><span>5</span></button>
+                        <button className={`perkins-key key-dot6 ${dots[5] ? 'active' : ''}`}><span>6</span></button>
+                    </div>
+
                 </div>
             </div>
 
@@ -78,17 +91,17 @@ export function PerkinsViewer({ brfText }: PerkinsViewerProps) {
                     onClick={prevChar}
                     disabled={currentIndex === 0}
                 >
-                    &larr; Previous
+                    &larr; Previous Step
                 </button>
-                <span className="perkins-progress">
-                    Character {currentIndex + 1} of {characters.length}
-                </span>
+                <div className="perkins-progress">
+                    Step {currentIndex + 1} of {characters.length}
+                </div>
                 <button
                     className="toolbar-btn"
                     onClick={nextChar}
                     disabled={currentIndex === characters.length - 1}
                 >
-                    Next &rarr;
+                    Next Step &rarr;
                 </button>
             </div>
         </div>

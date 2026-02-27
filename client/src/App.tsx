@@ -381,7 +381,7 @@ export default function App() {
         {/* Right pane: braille preview + print panel */}
         <aside className="side-pane">
           {isPerkinsMode ? (
-            <PerkinsViewer brfText={translatedText} />
+            <PerkinsViewer rawText={inputText} />
           ) : (
             <section
               className="brf-preview"
