@@ -13,7 +13,7 @@ import (
 // This implementation is used on macOS and Linux.
 func sendToPrinter(printerName string, data []byte) error {
 	// Write the BRF content to a temporary file.
-	tmp, err := os.CreateTemp("", "braillevibe-*.brf")
+	tmp, err := os.CreateTemp("", "graham-bridge-*.brf")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}

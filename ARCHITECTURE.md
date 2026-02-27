@@ -1,8 +1,8 @@
-# Braille Vibe — Architecture
+# Graham Braille Editor — Architecture
 
 ## Overview
 
-Braille Vibe is a client-side web application that converts text into any
+Graham Braille Editor is a client-side web application that converts text into any
 liblouis braille table and optionally sends the output to a physical embosser
 via a local Go bridge binary.  All braille translation happens in the browser
 via WebAssembly — no server-side translation component is required.
