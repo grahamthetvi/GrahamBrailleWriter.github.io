@@ -38,3 +38,44 @@ export function asciiToUnicodeBraille(asciiString: string): string {
     }
     return unicodeStr;
 }
+
+/**
+ * Given a Unicode Braille Character (U+2800 to U+28FF),
+ * returns an array of 8 booleans indicating which dots (1-8) are active.
+ * Dot 1 corresponds to index 0, Dot 8 corresponds to index 7.
+ */
+export function extractDots(unicodeChar: string): boolean[] {
+    const dots = [false, false, false, false, false, false, false, false];
+    if (!unicodeChar || unicodeChar.length === 0) return dots;
+
+    let codePoint = unicodeChar.charCodeAt(0);
+    // If it's a standard ASCII/BRF character, try to map it to unicode first
+    if (codePoint >= 0x20 && codePoint <= 0x7F) {
+        const unicodeConverted = asciiToUnicodeBraille(unicodeChar[0]);
+        if (unicodeConverted && unicodeConverted.length > 0) {
+            codePoint = unicodeConverted.charCodeAt(0);
+        }
+    }
+
+    if (codePoint >= 0x2800 && codePoint <= 0x28FF) {
+        const offset = codePoint - 0x2800;
+        // Dot 1: 0x1
+        dots[0] = (offset & 0x01) !== 0;
+        // Dot 2: 0x2
+        dots[1] = (offset & 0x02) !== 0;
+        // Dot 3: 0x4
+        dots[2] = (offset & 0x04) !== 0;
+        // Dot 4: 0x8
+        dots[3] = (offset & 0x08) !== 0;
+        // Dot 5: 0x10
+        dots[4] = (offset & 0x10) !== 0;
+        // Dot 6: 0x20
+        dots[5] = (offset & 0x20) !== 0;
+        // Dot 7: 0x40
+        dots[6] = (offset & 0x40) !== 0;
+        // Dot 8: 0x80
+        dots[7] = (offset & 0x80) !== 0;
+    }
+
+    return dots;
+}

@@ -3,6 +3,7 @@ import { Editor } from './components/Editor';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
+import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille, type MathCode } from './hooks/useBraille';
 import { asciiToUnicodeBraille } from './utils/braille';
@@ -48,11 +49,11 @@ const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25 
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(
-    () => !localStorage.getItem('braille-vibe-welcome-seen')
+    () => !localStorage.getItem('graham-braille-welcome-seen')
   );
 
   function handleWelcomeClose() {
-    localStorage.setItem('braille-vibe-welcome-seen', '1');
+    localStorage.setItem('graham-braille-welcome-seen', '1');
     setShowWelcome(false);
   }
 
@@ -60,9 +61,12 @@ export default function App() {
   const [selectedTable, setSelectedTable] = useState(DEFAULT_TABLE);
   const [mathCode, setMathCode] = useState<MathCode>('nemeth');
 
+  // ── Perkins Viewer ───────────────────────────────────────────────────────
+  const [isPerkinsMode, setIsPerkinsMode] = useState(false);
+
   // ── Theme management ─────────────────────────────────────────────────────
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('braille-vibe-theme') as Theme | null;
+    const stored = localStorage.getItem('graham-braille-theme') as Theme | null;
     return stored ?? 'dark';
   });
 
@@ -72,7 +76,7 @@ export default function App() {
     } else {
       document.documentElement.setAttribute('data-theme', theme);
     }
-    localStorage.setItem('braille-vibe-theme', theme);
+    localStorage.setItem('graham-braille-theme', theme);
   }, [theme]);
 
   function cycleTheme() {
@@ -84,7 +88,7 @@ export default function App() {
   // ── Page layout settings ─────────────────────────────────────────────────
   const [pageSettings, setPageSettings] = useState<PageSettings>(() => {
     try {
-      const s = localStorage.getItem('braille-vibe-page-settings');
+      const s = localStorage.getItem('graham-braille-page-settings');
       return s ? (JSON.parse(s) as PageSettings) : DEFAULT_PAGE_SETTINGS;
     } catch {
       return DEFAULT_PAGE_SETTINGS;
@@ -92,7 +96,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('braille-vibe-page-settings', JSON.stringify(pageSettings));
+    localStorage.setItem('graham-braille-page-settings', JSON.stringify(pageSettings));
   }, [pageSettings]);
 
   const [showPageSettings, setShowPageSettings] = useState(false);
@@ -225,6 +229,7 @@ export default function App() {
             className="table-select"
             value={selectedTable}
             onChange={(e) => setSelectedTable(e.target.value)}
+            disabled={isPerkinsMode}
             title="Select a liblouis braille translation table"
             aria-label="Select braille translation table"
           >
@@ -248,6 +253,7 @@ export default function App() {
             className="table-select"
             value={mathCode}
             onChange={(e) => setMathCode(e.target.value as MathCode)}
+            disabled={isPerkinsMode}
             title="Select math braille code"
             aria-label="Select math braille code"
           >
@@ -270,7 +276,7 @@ export default function App() {
           <button
             className="toolbar-btn"
             onClick={handleConvertMath}
-            disabled={!workerReady || !inputText.trim()}
+            disabled={!workerReady || !inputText.trim() || isPerkinsMode}
             title="Scan text for LaTeX and substitute with braille math"
             aria-label="Scan text for LaTeX and substitute with braille math"
           >
@@ -286,10 +292,12 @@ export default function App() {
             tabIndex={-1}
             style={{ display: 'none' }}
             onChange={handleFileUpload}
+            disabled={isPerkinsMode}
           />
           <button
             className="toolbar-btn"
             onClick={() => fileInputRef.current?.click()}
+            disabled={isPerkinsMode}
             title="Load a text file for translation"
             aria-label="Open text file for translation"
           >
@@ -300,7 +308,7 @@ export default function App() {
           <button
             className="toolbar-btn toolbar-btn--primary"
             onClick={handleDownloadBrf}
-            disabled={!translatedText}
+            disabled={!translatedText || isPerkinsMode}
             title="Download the translated BRF file"
             aria-label="Download translated BRF file"
           >
@@ -311,10 +319,21 @@ export default function App() {
           <button
             className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
             onClick={() => setShowPrint(s => !s)}
+            disabled={isPerkinsMode}
             aria-expanded={showPrint}
             title="Toggle Print to Embosser panel"
           >
             🖨 Print
+          </button>
+
+          {/* Perkins Mode toggle */}
+          <button
+            className={`toolbar-btn${isPerkinsMode ? ' toolbar-btn--active' : ''}`}
+            onClick={() => setIsPerkinsMode(s => !s)}
+            aria-expanded={isPerkinsMode}
+            title="Toggle Perkins Brailler Translator layout"
+          >
+            🎹 Perkins Viewer
           </button>
 
           {/* Theme toggle */}
@@ -361,106 +380,110 @@ export default function App() {
 
         {/* Right pane: braille preview + print panel */}
         <aside className="side-pane">
-          <section
-            className="brf-preview"
-            aria-label="Braille preview output"
-            aria-live="polite"
-          >
-            {/* Pane title row with settings toggle */}
-            <div className="pane-title-row">
-              <div className="pane-title">
-                BRF Preview
-                {isLoading && translatedText && (
-                  <span className="preview-loading"> — translating…</span>
-                )}
+          {isPerkinsMode ? (
+            <PerkinsViewer brfText={translatedText} />
+          ) : (
+            <section
+              className="brf-preview"
+              aria-label="Braille preview output"
+              aria-live="polite"
+            >
+              {/* Pane title row with settings toggle */}
+              <div className="pane-title-row">
+                <div className="pane-title">
+                  BRF Preview
+                  {isLoading && translatedText && (
+                    <span className="preview-loading"> — translating…</span>
+                  )}
+                </div>
+                <button
+                  className="layout-settings-btn"
+                  onClick={() => setShowPageSettings(s => !s)}
+                  aria-expanded={showPageSettings}
+                  aria-controls="page-settings-panel"
+                  title="Configure page layout (cells per row, lines per page)"
+                >
+                  ⚙ Layout
+                </button>
               </div>
-              <button
-                className="layout-settings-btn"
-                onClick={() => setShowPageSettings(s => !s)}
-                aria-expanded={showPageSettings}
-                aria-controls="page-settings-panel"
-                title="Configure page layout (cells per row, lines per page)"
-              >
-                ⚙ Layout
-              </button>
-            </div>
 
-            {/* Page layout settings panel */}
-            {showPageSettings && (
-              <div id="page-settings-panel" className="page-settings-panel">
-                <label className="settings-field">
-                  <span>Cells / row</span>
-                  <input
-                    type="number"
-                    min={10}
-                    max={100}
-                    value={pageSettings.cellsPerRow}
-                    onChange={handleCellsChange}
-                    aria-label="Braille cells per row"
-                  />
-                </label>
-                <label className="settings-field">
-                  <span>Lines / page</span>
-                  <input
-                    type="number"
-                    min={5}
-                    max={50}
-                    value={pageSettings.linesPerPage}
-                    onChange={handleLinesChange}
-                    aria-label="Lines per page"
-                  />
-                </label>
-                <p className="settings-hint">
-                  Common: 40 × 25 (letter), 32 × 28 (A4)
+              {/* Page layout settings panel */}
+              {showPageSettings && (
+                <div id="page-settings-panel" className="page-settings-panel">
+                  <label className="settings-field">
+                    <span>Cells / row</span>
+                    <input
+                      type="number"
+                      min={10}
+                      max={100}
+                      value={pageSettings.cellsPerRow}
+                      onChange={handleCellsChange}
+                      aria-label="Braille cells per row"
+                    />
+                  </label>
+                  <label className="settings-field">
+                    <span>Lines / page</span>
+                    <input
+                      type="number"
+                      min={5}
+                      max={50}
+                      value={pageSettings.linesPerPage}
+                      onChange={handleLinesChange}
+                      aria-label="Lines per page"
+                    />
+                  </label>
+                  <p className="settings-hint">
+                    Common: 40 × 25 (letter), 32 × 28 (A4)
+                  </p>
+                </div>
+              )}
+
+              {/* Progress bar for chunked large-document translation */}
+              {isLoading && progress > 0 && progress < 100 && (
+                <div
+                  className="progress-bar-wrap"
+                  role="progressbar"
+                  aria-valuenow={progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Translation progress"
+                >
+                  <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+                  <span className="progress-label">{progress}%</span>
+                </div>
+              )}
+
+              {error && (
+                <p className="translation-error" role="alert">
+                  Translation error: {error}
                 </p>
-              </div>
-            )}
+              )}
 
-            {/* Progress bar for chunked large-document translation */}
-            {isLoading && progress > 0 && progress < 100 && (
-              <div
-                className="progress-bar-wrap"
-                role="progressbar"
-                aria-valuenow={progress}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Translation progress"
-              >
-                <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-                <span className="progress-label">{progress}%</span>
-              </div>
-            )}
-
-            {error && (
-              <p className="translation-error" role="alert">
-                Translation error: {error}
-              </p>
-            )}
-
-            {/* Paginated Word-like braille output */}
-            {brfPages.length > 0 ? (
-              <div className="brf-pages-container" aria-label="Braille pages">
-                {brfPages.map((pageContent, i) => (
-                  <div
-                    key={i}
-                    className="brf-page"
-                    aria-label={`Braille page ${i + 1} of ${brfPages.length}`}
-                  >
-                    <div className="brf-page-number" aria-hidden="true">
-                      p. {i + 1}
+              {/* Paginated Word-like braille output */}
+              {brfPages.length > 0 ? (
+                <div className="brf-pages-container" aria-label="Braille pages">
+                  {brfPages.map((pageContent, i) => (
+                    <div
+                      key={i}
+                      className="brf-page"
+                      aria-label={`Braille page ${i + 1} of ${brfPages.length}`}
+                    >
+                      <div className="brf-page-number" aria-hidden="true">
+                        p. {i + 1}
+                      </div>
+                      <pre className="brf-page-content">{pageContent}</pre>
                     </div>
-                    <pre className="brf-page-content">{pageContent}</pre>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="brf-placeholder" aria-live="polite">
-                {workerReady
-                  ? 'Type in the editor or open a file to see braille output.'
-                  : 'Loading liblouis WASM…'}
-              </p>
-            )}
-          </section>
+                  ))}
+                </div>
+              ) : (
+                <p className="brf-placeholder" aria-live="polite">
+                  {workerReady
+                    ? 'Type in the editor or open a file to see braille output.'
+                    : 'Loading liblouis WASM…'}
+                </p>
+              )}
+            </section>
+          )}
 
         </aside>
       </main>

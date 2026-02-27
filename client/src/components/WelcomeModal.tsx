@@ -6,7 +6,7 @@ interface WelcomeModalProps {
 
 /**
  * First-visit onboarding modal.
- * Shown once, dismissed state saved to localStorage ('braille-vibe-welcome-seen').
+ * Shown once, dismissed state saved to localStorage ('graham-braille-welcome-seen').
  * Covers: page layout settings, Bridge app, and Math/LaTeX translation.
  */
 export function WelcomeModal({ onClose }: WelcomeModalProps) {
@@ -82,7 +82,7 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
               <p>
                 To print directly to an embosser, download the <strong>Graham Bridge</strong> helper app for your platform:
               </p>
-              
+
               <div className="install-grid">
                 <div className="install-card">
                   <h4>🪟 Windows</h4>
