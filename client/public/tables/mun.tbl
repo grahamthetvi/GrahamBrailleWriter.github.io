@@ -1,7 +1,4 @@
-#-index-name: Munda
-#-display-name: Munda braille
-
-#+language:mun
+#+locale:mun
 #+type:literary
 
 # TODO: Please correct the metadata above. It is not meant to be
@@ -13,5 +10,6 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
+include spaces.ctb
 include mun.ctb
 include braille-patterns.cti

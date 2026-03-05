@@ -1,7 +1,4 @@
-#-index-name: Nepali
-#-display-name: Nepali braille
-
-#+language:ne
+#+locale:ne
 #+type:literary
 #+grade:1
 
@@ -14,5 +11,6 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
+include spaces.ctb
 include np-in-g1.utb
 include braille-patterns.cti

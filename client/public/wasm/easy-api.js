@@ -47,7 +47,7 @@ liblouis.setLiblouisBuild = function setLiblouisBuild(_capi) {
 	if(liblouis._log_callback_fn_pointer) {
 		capi.Runtime.removeFunction(liblouis._log_callback_fn_pointer);
 		capi  = _capi;
-		liblouis.registerLogCallback(liblouis._log_callback_fn_pointer);
+		liblouis.registerLogCallback(liblouis._log_callback_js_fn || null);
 	} else {
 		capi  = _capi;
 		liblouis.registerLogCallback(null);
@@ -79,6 +79,7 @@ liblouis.registerLogCallback = function(fn) {
 		fn = easyApiDefaultLogCallback;
 	}
 
+	liblouis._log_callback_js_fn = fn;
 	liblouis._log_callback_fn_pointer = capi.Runtime.addFunction(function(logLvl, msg) {
 		fn(logLvl, capi.Pointer_stringify(msg));
 	});

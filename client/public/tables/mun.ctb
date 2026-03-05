@@ -18,7 +18,5 @@
 #  <http://www.gnu.org/licenses/>.
 
 # Table for Munda
-space \x00a0 a
-include spaces.uti
 include bengali.cti
 include text_nabcc.dis

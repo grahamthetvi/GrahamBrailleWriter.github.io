@@ -7,7 +7,7 @@ export default defineConfig({
 
   // Set base to the repo name for GitHub Pages deployment.
   // Override via VITE_BASE_URL env var if needed.
-  base: process.env.VITE_BASE_URL ?? '/GrahamBrailleWriter/',
+  base: process.env.VITE_BASE_URL ?? '/Graham_Braille_Editor/',
 
   worker: {
     // ES module workers allow static/dynamic imports and fetch()-based loading
@@ -19,7 +19,6 @@ export default defineConfig({
     // Exclude monaco-editor from pre-bundling — it manages its own workers.
     exclude: ['monaco-editor'],
   },
-
   build: {
     rollupOptions: {
       output: {

@@ -18,6 +18,5 @@
 #  <http://www.gnu.org/licenses/>.
 
 # Table for Dravidian
-space \x00a0 a
 include tamil.cti
 include text_nabcc.dis

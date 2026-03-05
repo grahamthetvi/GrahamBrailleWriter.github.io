@@ -1,7 +1,7 @@
 {
-  "name": "braille-vibe",
+  "name": "graham-braille-editor",
   "version": "0.1.0",
-  "description": "Braille Vibe — Braille editing and embossing suite (monorepo root)",
+  "description": "Graham Braille Editor — Braille editing and embossing suite (monorepo root)",
   "private": true,
   "workspaces": [
     "client"

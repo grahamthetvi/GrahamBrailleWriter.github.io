@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -30,7 +32,7 @@ var (
 	procStartPage   = winspool.NewProc("StartPagePrinter")
 	procWrite       = winspool.NewProc("WritePrinter")
 	procEndPage     = winspool.NewProc("EndPagePrinter")
-	procEndDoc      = winspool.NewProc("EndDocPrinterW")
+	procEndDoc      = winspool.NewProc("EndDocPrinter")
 	procClose       = winspool.NewProc("ClosePrinter")
 )
 
@@ -62,7 +64,7 @@ func sendToPrinter(printerName string, data []byte) error {
 	defer procClose.Call(hPrinter) //nolint:errcheck
 
 	// Build DOC_INFO_1 with datatype "RAW".
-	docName, _ := syscall.UTF16PtrFromString("Braille Vibe Job")
+	docName, _ := syscall.UTF16PtrFromString("Graham Bridge Job")
 	datatype, _ := syscall.UTF16PtrFromString("RAW")
 	info := &docInfo1{
 		pDocName:    docName,
@@ -78,11 +80,13 @@ func sendToPrinter(printerName string, data []byte) error {
 	if ret == 0 {
 		return fmt.Errorf("StartDocPrinterW failed: %w", lastErr)
 	}
+	defer procEndDoc.Call(hPrinter) //nolint:errcheck
 
 	ret, _, lastErr = procStartPage.Call(hPrinter)
 	if ret == 0 {
 		return fmt.Errorf("StartPagePrinter failed: %w", lastErr)
 	}
+	defer procEndPage.Call(hPrinter) //nolint:errcheck
 
 	var written uint32
 	ret, _, lastErr = procWrite.Call(
@@ -98,8 +102,24 @@ func sendToPrinter(printerName string, data []byte) error {
 		return fmt.Errorf("WritePrinter wrote %d of %d bytes", written, len(data))
 	}
 
-	procEndPage.Call(hPrinter) //nolint:errcheck
-	procEndDoc.Call(hPrinter)  //nolint:errcheck
-
 	return nil
+}
+
+// listPrinters returns the names of all printers installed on Windows.
+func listPrinters() []string {
+	out, err := exec.Command(
+		"powershell", "-NoProfile", "-NonInteractive", "-Command",
+		"Get-Printer | Select-Object -ExpandProperty Name",
+	).Output()
+	if err != nil {
+		return nil
+	}
+	var result []string
+	for _, line := range strings.Split(string(out), "\n") {
+		name := strings.TrimSpace(line)
+		if name != "" {
+			result = append(result, name)
+		}
+	}
+	return result
 }

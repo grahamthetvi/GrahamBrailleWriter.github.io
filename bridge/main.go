@@ -1,4 +1,4 @@
-// Braille Vibe Bridge
+// Graham Bridge
 //
 // A small HTTP server that runs locally on the user's machine and provides
 // raw print access to Braille embossers (especially ViewPlus devices).
@@ -18,6 +18,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
+	"runtime"
+	"time"
+
+	"fyne.io/systray"
 )
 
 const listenAddr = "127.0.0.1:8080"
@@ -95,8 +100,29 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("print request: printer=%q bytes=%d", req.Printer, len(rawBytes))
 
-	if err := sendToPrinter(req.Printer, rawBytes); err != nil {
-		http.Error(w, fmt.Sprintf("print failed: %v", err), http.StatusInternalServerError)
+	// Capture BRF text (first 4 KB) and hex dump before sending.
+	brfText := string(rawBytes)
+	if len(brfText) > 4096 {
+		brfText = brfText[:4096]
+	}
+
+	printErr := sendToPrinter(req.Printer, rawBytes)
+
+	// Record the job event for the debug UI.
+	e := JobEvent{
+		Time:    time.Now(),
+		Printer: req.Printer,
+		Bytes:   len(rawBytes),
+		BRFText: brfText,
+		HexDump: hexDump(rawBytes),
+	}
+	if printErr != nil {
+		e.ErrMsg = printErr.Error()
+	}
+	appendJob(e)
+
+	if printErr != nil {
+		http.Error(w, fmt.Sprintf("print failed: %v", printErr), http.StatusInternalServerError)
 		return
 	}
 
@@ -110,12 +136,69 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", withCORS(statusHandler))
-	mux.HandleFunc("/print", withCORS(printHandler))
+	go func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/status", withCORS(statusHandler))
+		mux.HandleFunc("/print", withCORS(printHandler))
+		mux.HandleFunc("/debug", withCORS(handleDebugPage))
+		mux.HandleFunc("/log-stream", withCORS(handleLogStream))
+		mux.HandleFunc("/printers", withCORS(handlePrinters))
+		mux.HandleFunc("/testprint", withCORS(handleTestPrint))
 
-	log.Printf("Braille Vibe Bridge listening on http://%s", listenAddr)
-	if err := http.ListenAndServe(listenAddr, mux); err != nil {
-		log.Fatalf("server error: %v", err)
+		log.Printf("Graham Bridge listening on http://%s", listenAddr)
+		if err := http.ListenAndServe(listenAddr, mux); err != nil {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	systray.Run(onReady, onExit)
+}
+
+func onReady() {
+	systray.SetIcon(iconData)
+	systray.SetTitle("Graham Bridge")
+	systray.SetTooltip("Graham Bridge – HTTP Print Server")
+
+	mStatus := systray.AddMenuItem("Status: Running on port 8080", "Bridge is running")
+	mStatus.Disable()
+
+	systray.AddSeparator()
+	mDebug := systray.AddMenuItem("Open Debug Page", "View print logs and test the embosser")
+	mOpen := systray.AddMenuItem("Open Graham Bridge Editor", "Launch the web app")
+	mQuit := systray.AddMenuItem("Quit", "Quit the bridge")
+
+	go func() {
+		for {
+			select {
+			case <-mDebug.ClickedCh:
+				openBrowser("http://" + listenAddr + "/debug")
+			case <-mOpen.ClickedCh:
+				openBrowser("https://grahamthetvi.github.io/Graham_Braille_Editor/")
+			case <-mQuit.ClickedCh:
+				systray.Quit()
+			}
+		}
+	}()
+}
+
+func onExit() {
+	// cleanup if necessary
+	log.Println("Shutting down Graham Bridge...")
+}
+
+func openBrowser(url string) {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		log.Printf("Failed to open browser: %v", err)
 	}
 }

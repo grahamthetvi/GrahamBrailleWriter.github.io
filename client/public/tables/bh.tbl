@@ -1,7 +1,4 @@
-#-index-name: Bihari
-#-display-name: Bihari braille
-
-#+language:bh
+#+locale:bh
 #+type:literary
 
 # TODO: Please correct the metadata above. It is not meant to be
@@ -13,5 +10,6 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
+include spaces.ctb
 include bh.ctb
 include braille-patterns.cti

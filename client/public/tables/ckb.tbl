@@ -1,7 +1,4 @@
-#-index-name: Kurdish
-#-display-name: Kurdish braille
-
-#+language:ckb
+#+locale:ckb
 #+type:literary
 #+grade:1
 

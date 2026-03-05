@@ -1,7 +1,4 @@
-#-index-name: Icelandic
-#-display-name: Icelandic braille
-
-#+language:is
+#+locale:is
 #+type:literary
 #+dots:6
 

@@ -1,50 +1,199 @@
 /* ============================================================
    Braille Vibe — Application Layout
+   All colors use CSS custom properties defined in index.css.
    ============================================================ */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  background: var(--bg);
+  color: var(--text-primary);
 }
 
 #root {
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Root app container — fills #root and establishes the column layout */
+.app-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   max-width: 100%;
-  padding: 0;
   text-align: left;
 }
 
-/* Header */
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
 .app-header {
-  padding: 0.75rem 1.5rem;
-  background: #16213e;
-  border-bottom: 1px solid #0f3460;
+  padding: 0.5rem 1rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.app-title {
   display: flex;
   align-items: baseline;
-  gap: 1rem;
+  gap: 0.6rem;
+  flex-shrink: 0;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.5rem;
-  color: #e94560;
+  font-size: 1.3rem;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .subtitle {
   margin: 0;
-  font-size: 0.85rem;
-  color: #888;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-/* Main two-pane layout */
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.toolbar-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.table-select {
+  flex: 1;
+  min-width: 260px;
+  max-width: 420px;
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.table-select:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.table-select optgroup {
+  background: var(--bg-overlay);
+  color: var(--text-secondary);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.table-select option {
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+}
+
+.worker-indicator {
+  font-family: monospace;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.worker-indicator.ready {
+  color: var(--success);
+}
+
+.worker-indicator.loading {
+  color: #f0a500;
+}
+
+.toolbar-btn {
+  padding: 0.35rem 0.8rem;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+  filter: brightness(1.15);
+}
+
+.toolbar-btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.toolbar-btn--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* ── Theme Toggle Button ────────────────────────────────────────────────── */
+
+.theme-toggle {
+  padding: 0.35rem 0.7rem;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--text-secondary);
+  filter: brightness(1.15);
+}
+
+.theme-toggle:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Main two-pane layout ───────────────────────────────────────────────── */
+
 .app-main {
   display: flex;
   flex: 1;
@@ -55,94 +204,358 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  padding: 0.75rem;
   overflow: hidden;
-}
-
-.editor-pane h2 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #888;
+  min-width: 0;
 }
 
 .side-pane {
-  width: 340px;
-  min-width: 280px;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #0f3460;
-  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  overflow: hidden;
 }
 
-/* BRF Preview */
-.brf-preview {
-  padding: 1rem;
-  border-bottom: 1px solid #0f3460;
-}
+/* ── Pane title ──────────────────────────────────────────────────────────── */
 
-.brf-preview h2 {
+.pane-title {
   margin: 0 0 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #888;
+  color: var(--text-secondary);
 }
 
-.brf-output {
-  margin: 0;
-  padding: 0.75rem;
-  background: #0d1117;
-  border: 1px solid #30363d;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 1.2rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 200px;
-  overflow-y: auto;
-  color: #58a6ff;
-}
+/* ── BRF Preview ─────────────────────────────────────────────────────────── */
 
-/* Print Panel */
-.print-panel {
-  padding: 1rem;
+.brf-preview {
+  flex: 1;
+  padding: 0.75rem 1rem 0;
+  border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Title row: "BRF Preview" label + ⚙ Layout button side by side */
+.pane-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.pane-title-row .pane-title {
+  margin: 0;
+}
+
+.layout-settings-btn {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  background: var(--bg-overlay);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.layout-settings-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.layout-settings-btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Page layout settings panel */
+.page-settings-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.settings-field input[type="number"] {
+  width: 4.5rem;
+  padding: 0.2rem 0.4rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.settings-field input[type="number"]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.settings-hint {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  flex-basis: 100%;
+}
+
+.preview-loading {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Progress bar */
+.progress-bar-wrap {
+  position: relative;
+  height: 6px;
+  background: var(--bg-overlay);
+  border-radius: 3px;
+  margin-bottom: 0.75rem;
+  overflow: visible;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.15s ease;
+}
+
+.progress-label {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.translation-error {
+  margin: 0 0 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  color: var(--error);
+}
+
+/* ── Paginated braille page view (Word-like) ─────────────────────────────── */
+
+.brf-pages-container {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+}
+
+.brf-page {
+  background: transparent;
+  box-shadow: none;
+  padding: 0 1rem 0 3.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.brf-page:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 2rem;
+  right: 2rem;
+  border-bottom: 1px dashed var(--border);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.brf-page-number {
+  position: absolute;
+  top: 0;
+  right: 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.75rem;
+  text-align: right;
+  color: var(--text-secondary);
+  user-select: none;
+  opacity: 0.5;
+  line-height: 24px;
+}
+
+.brf-page-content {
+  margin: 0;
+  /* Monospace so braille characters line up correctly at cellsPerRow width */
+  font-family: 'Consolas', 'Courier New', 'Noto Sans Mono', monospace;
+  font-size: 16px;
+  line-height: 24px;
+  white-space: pre;
+  overflow-x: hidden;
+  color: var(--braille-color);
+}
+
+.brf-placeholder {
+  margin: 0;
+  padding: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* ── Active toolbar button (e.g. Print toggle when panel is open) ─────────── */
+
+.toolbar-btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.toolbar-btn--active:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* ── Header print bar (compact, full-width row below the toolbar) ──────────── */
+
+.header-print-bar {
+  flex-basis: 100%;
+  /* forces a new row inside the flex-wrap header */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.print-panel-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.print-panel-compact label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.print-panel-compact .printer-input {
+  flex: 1;
+  min-width: 160px;
+  max-width: 320px;
+  padding: 0.3rem 0.5rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.print-panel-compact .printer-input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.print-panel-compact .printer-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bridge-badge {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 4px;
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+.print-status-ok {
+  font-size: 0.78rem;
+  color: var(--success);
+  white-space: nowrap;
+}
+
+.print-status-err {
+  font-size: 0.78rem;
+  color: var(--error);
+}
+
+/* ── Print Panel (vertical — kept for future use) ────────────────────────── */
+
+.print-panel {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .print-panel h3 {
   margin: 0;
-  font-size: 1rem;
-  color: #e0e0e0;
+  font-size: 0.9rem;
+  color: var(--text-primary);
 }
 
 .bridge-warning {
   margin: 0;
-  padding: 0.5rem 0.75rem;
-  background: #2d1b0e;
-  border: 1px solid #b45309;
+  padding: 0.4rem 0.6rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
   border-radius: 4px;
-  font-size: 0.8rem;
-  color: #fbbf24;
+  font-size: 0.75rem;
+  color: var(--warning);
 }
 
 .print-panel label {
-  font-size: 0.85rem;
-  color: #aaa;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .print-panel input[type="text"] {
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  background: #0d1117;
-  border: 1px solid #30363d;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #e0e0e0;
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.print-panel input[type="text"]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 .print-panel input[type="text"]:disabled {
@@ -151,62 +564,482 @@ body {
 }
 
 .print-panel button {
-  padding: 0.6rem 1.25rem;
-  background: #e94560;
-  color: #fff;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--accent-text);
   border: none;
   border-radius: 4px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .print-panel button:hover:not(:disabled) {
-  background: #c73652;
+  background: var(--accent-hover);
+}
+
+.print-panel button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .print-panel button:disabled {
-  background: #444;
+  background: var(--bg-overlay);
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .status-ok {
   margin: 0;
-  color: #4ade80;
-  font-size: 0.85rem;
+  color: var(--success);
+  font-size: 0.78rem;
 }
 
 .status-err {
   margin: 0;
-  color: #f87171;
-  font-size: 0.85rem;
+  color: var(--error);
+  font-size: 0.78rem;
 }
 
-/* Status Bar */
+/* ── Welcome / Onboarding Modal ─────────────────────────────────────────── */
+
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.welcome-modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.welcome-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.welcome-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.welcome-close {
+  padding: 0.25rem 0.55rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.welcome-close:hover {
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+}
+
+.welcome-close:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.welcome-section {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.welcome-section-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+  line-height: 1.4;
+  margin-top: 0.1rem;
+}
+
+.welcome-section h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.welcome-section p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.welcome-section p + p {
+  margin-top: 0.5rem;
+}
+
+.welcome-section p strong {
+  color: var(--text-primary);
+}
+
+.welcome-section code {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.78rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  color: var(--accent);
+}
+
+.welcome-tip {
+  margin-top: 0.6rem !important;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-overlay);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+}
+
+.welcome-footer {
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.welcome-btn-primary {
+  padding: 0.5rem 1.75rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.welcome-btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.welcome-btn-primary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Status Bar ──────────────────────────────────────────────────────────── */
+
 .status-bar {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  padding: 0.4rem 1rem;
-  background: #16213e;
-  border-top: 1px solid #0f3460;
-  font-size: 0.78rem;
+  padding: 0.3rem 1rem;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
 }
 
 .bridge-indicator {
   font-family: monospace;
-  font-size: 0.8rem;
 }
 
 .bridge-indicator.connected {
-  color: #4ade80;
+  color: var(--success);
 }
 
 .bridge-indicator.disconnected {
-  color: #888;
+  color: var(--text-secondary);
 }
 
-.brf-stats {
-  color: #666;
+.status-stat {
+  color: var(--text-secondary);
 }
+
+.status-progress {
+  color: var(--accent);
+  font-family: monospace;
+}
+
+/* ── Installation Grid ──────────────────────────────────────────────────── */
+
+.welcome-bridge-content {
+  flex: 1;
+}
+
+.install-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.install-card {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.install-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.install-card h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.install-card ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.install-card li:not(:last-child) {
+  margin-bottom: 0.4rem;
+}
+
+.welcome-footer-links {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.welcome-btn-secondary {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  background: var(--bg-overlay);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.welcome-btn-secondary:hover {
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.3);
+}
+
+.welcome-note {
+  font-size: 0.7rem !important;
+  font-style: italic;
+  opacity: 0.8;
+}
+ / *    % %  P e r k i n s   V i e w e r    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  * / 
+ 
+ . p e r k i n s - v i e w e r   { 
+     f l e x :   1 ; 
+     p a d d i n g :   1 . 5 r e m ; 
+     d i s p l a y :   f l e x ; 
+     f l e x - d i r e c t i o n :   c o l u m n ; 
+     a l i g n - i t e m s :   c e n t e r ; 
+     j u s t i f y - c o n t e n t :   c e n t e r ; 
+     o v e r f l o w - y :   a u t o ; 
+     b a c k g r o u n d :   v a r ( - - b g - s u r f a c e ) ; 
+ } 
+ 
+ . p e r k i n s - v i e w e r . e m p t y   { 
+     c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ; 
+     f o n t - s t y l e :   i t a l i c ; 
+ } 
+ 
+ . p e r k i n s - h e a d e r   { 
+     t e x t - a l i g n :   c e n t e r ; 
+     m a r g i n - b o t t o m :   2 r e m ; 
+ } 
+ 
+ . p e r k i n s - h e a d e r   h 3   { 
+     m a r g i n :   0   0   0 . 5 r e m ; 
+     c o l o r :   v a r ( - - a c c e n t ) ; 
+ } 
+ 
+ . p e r k i n s - i n s t r u c t i o n   { 
+     m a r g i n :   0 ; 
+     f o n t - s i z e :   0 . 9 r e m ; 
+     c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ; 
+ } 
+ 
+ . p e r k i n s - c u r r e n t - c h a r a c t e r - d i s p l a y   { 
+     d i s p l a y :   f l e x ; 
+     a l i g n - i t e m s :   c e n t e r ; 
+     g a p :   1 r e m ; 
+     m a r g i n - b o t t o m :   3 r e m ; 
+     p a d d i n g :   1 r e m   2 r e m ; 
+     b a c k g r o u n d :   v a r ( - - b g - o v e r l a y ) ; 
+     b o r d e r :   1 p x   s o l i d   v a r ( - - b o r d e r ) ; 
+     b o r d e r - r a d i u s :   8 p x ; 
+     b o x - s h a d o w :   0   4 p x   1 2 p x   r g b a ( 0 ,   0 ,   0 ,   0 . 1 ) ; 
+ } 
+ 
+ . p e r k i n s - l a b e l   { 
+     f o n t - s i z e :   0 . 9 r e m ; 
+     t e x t - t r a n s f o r m :   u p p e r c a s e ; 
+     l e t t e r - s p a c i n g :   0 . 0 5 e m ; 
+     c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ; 
+ } 
+ 
+ . p e r k i n s - c h a r   { 
+     f o n t - s i z e :   2 . 5 r e m ; 
+     f o n t - w e i g h t :   b o l d ; 
+     f o n t - f a m i l y :   m o n o s p a c e ; 
+     c o l o r :   v a r ( - - t e x t - p r i m a r y ) ; 
+     m i n - w i d t h :   2 r e m ; 
+     t e x t - a l i g n :   c e n t e r ; 
+ } 
+ 
+ . p e r k i n s - u n i c o d e   { 
+     f o n t - s i z e :   2 . 5 r e m ; 
+     c o l o r :   v a r ( - - b r a i l l e - c o l o r ,   v a r ( - - a c c e n t ) ) ; 
+     m i n - w i d t h :   2 r e m ; 
+     t e x t - a l i g n :   c e n t e r ; 
+ } 
+ 
+ . p e r k i n s - k e y b o a r d - l a y o u t   { 
+     d i s p l a y :   f l e x ; 
+     a l i g n - i t e m s :   c e n t e r ; 
+     g a p :   1 . 5 r e m ; 
+     m a r g i n - b o t t o m :   3 r e m ; 
+     p e r s p e c t i v e :   8 0 0 p x ; 
+ } 
+ 
+ . p e r k i n s - k e y s - s i d e   { 
+     d i s p l a y :   f l e x ; 
+     g a p :   0 . 7 5 r e m ; 
+ } 
+ 
+ . p e r k i n s - k e y   { 
+     w i d t h :   6 0 p x ; 
+     h e i g h t :   1 0 0 p x ; 
+     b a c k g r o u n d :   v a r ( - - b g - o v e r l a y ) ; 
+     b o r d e r :   2 p x   s o l i d   v a r ( - - b o r d e r ) ; 
+     b o r d e r - r a d i u s :   8 p x   8 p x   1 6 p x   1 6 p x ; 
+     b o x - s h a d o w :   0   6 p x   0   v a r ( - - b o r d e r ) ,   0   8 p x   1 0 p x   r g b a ( 0 ,   0 ,   0 ,   0 . 2 ) ; 
+     d i s p l a y :   f l e x ; 
+     a l i g n - i t e m s :   f l e x - e n d ; 
+     j u s t i f y - c o n t e n t :   c e n t e r ; 
+     p a d d i n g - b o t t o m :   1 r e m ; 
+     t r a n s i t i o n :   a l l   0 . 1 s   c u b i c - b e z i e r ( 0 . 4 ,   0 ,   0 . 2 ,   1 ) ; 
+     p o s i t i o n :   r e l a t i v e ; 
+     o v e r f l o w :   h i d d e n ; 
+ } 
+ 
+ . p e r k i n s - k e y   s p a n   { 
+     f o n t - s i z e :   0 . 7 5 r e m ; 
+     f o n t - w e i g h t :   6 0 0 ; 
+     c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ; 
+     u s e r - s e l e c t :   n o n e ; 
+ } 
+ 
+ . p e r k i n s - k e y . a c t i v e   { 
+     b a c k g r o u n d :   v a r ( - - a c c e n t ) ; 
+     b o r d e r - c o l o r :   v a r ( - - a c c e n t - h o v e r ) ; 
+     b o x - s h a d o w :   0   2 p x   0   v a r ( - - a c c e n t - h o v e r ) ,   0   3 p x   5 p x   r g b a ( 0 ,   0 ,   0 ,   0 . 4 ) ; 
+     t r a n s f o r m :   t r a n s l a t e Y ( 4 p x ) ; 
+ } 
+ 
+ . p e r k i n s - k e y . a c t i v e   s p a n   { 
+     c o l o r :   v a r ( - - b g ) ; 
+ } 
+ 
+ . p e r k i n s - s p a c e b a r   { 
+     w i d t h :   1 4 0 p x ; 
+     h e i g h t :   8 0 p x ; 
+     m a r g i n - t o p :   2 0 p x ; 
+     b a c k g r o u n d :   v a r ( - - b g - o v e r l a y ) ; 
+     b o r d e r :   2 p x   s o l i d   v a r ( - - b o r d e r ) ; 
+     b o r d e r - r a d i u s :   8 p x   8 p x   1 6 p x   1 6 p x ; 
+     b o x - s h a d o w :   0   6 p x   0   v a r ( - - b o r d e r ) ,   0   8 p x   1 0 p x   r g b a ( 0 ,   0 ,   0 ,   0 . 2 ) ; 
+     d i s p l a y :   f l e x ; 
+     a l i g n - i t e m s :   f l e x - e n d ; 
+     j u s t i f y - c o n t e n t :   c e n t e r ; 
+     p a d d i n g - b o t t o m :   1 r e m ; 
+     t r a n s i t i o n :   a l l   0 . 1 s ; 
+ } 
+ 
+ . p e r k i n s - s p a c e b a r   s p a n   { 
+     f o n t - s i z e :   0 . 7 5 r e m ; 
+     f o n t - w e i g h t :   6 0 0 ; 
+     c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ; 
+     u s e r - s e l e c t :   n o n e ; 
+ } 
+ 
+ . p e r k i n s - s p a c e b a r . a c t i v e   { 
+     b a c k g r o u n d :   v a r ( - - a c c e n t ) ; 
+     b o r d e r - c o l o r :   v a r ( - - a c c e n t - h o v e r ) ; 
+     b o x - s h a d o w :   0   2 p x   0   v a r ( - - a c c e n t - h o v e r ) ,   0   3 p x   5 p x   r g b a ( 0 ,   0 ,   0 ,   0 . 4 ) ; 
+     t r a n s f o r m :   t r a n s l a t e Y ( 4 p x ) ; 
+ } 
+ 
+ . p e r k i n s - s p a c e b a r . a c t i v e   s p a n   { 
+     c o l o r :   v a r ( - - b g ) ; 
+ } 
+ 
+ . p e r k i n s - n a v i g a t i o n   { 
+     d i s p l a y :   f l e x ; 
+     a l i g n - i t e m s :   c e n t e r ; 
+     j u s t i f y - c o n t e n t :   c e n t e r ; 
+     g a p :   1 . 5 r e m ; 
+     w i d t h :   1 0 0 % ; 
+     m a x - w i d t h :   5 0 0 p x ; 
+     p a d d i n g - t o p :   2 r e m ; 
+     b o r d e r - t o p :   1 p x   d a s h e d   v a r ( - - b o r d e r ) ; 
+ } 
+ 
+ . p e r k i n s - p r o g r e s s   { 
+     f o n t - s i z e :   0 . 8 5 r e m ; 
+     c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ; 
+     m i n - w i d t h :   1 5 0 p x ; 
+     t e x t - a l i g n :   c e n t e r ; 
+ } 
+  
+ 

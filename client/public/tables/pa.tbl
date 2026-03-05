@@ -1,7 +1,4 @@
-#-index-name: Punjabi
-#-display-name: Punjabi braille
-
-#+language:pa
+#+locale:pa
 #+type:literary
 #+grade:1
 
@@ -14,5 +11,6 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
+include spaces.ctb
 include pu-in-g1.utb
 include braille-patterns.cti

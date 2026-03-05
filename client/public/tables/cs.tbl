@@ -1,12 +1,7 @@
-#-index-name: Czech
-#-display-name: Czech braille
-
-#+language:cs
+#+locale:cs
 #+type:literary
 #+grade:1
-# Marked as "direction:forward" by Bue Vester-Andersen
-# as tests only run forward.
-#+direction:forward
+#+hyphenation:yes
 
 # TODO: Please correct the metadata above. It is not meant to be
 # accurate nor complete. It hasn't been verified by the table
@@ -18,3 +13,5 @@
 # to https://github.com/liblouis/braille-specs.
 
 include cs-g1.ctb
+include hyph_cs_CZ.dic
+include braille-patterns.cti
