@@ -124,8 +124,7 @@ const files = readdirSync(localTablesDir);
 
 let copied = 0;
 for (const file of files) {
-  // Only copy actual table files to avoid copying Makefiles or READMEs
-  if (file.endsWith('.ctb') || file.endsWith('.cti') || file.endsWith('.uti') || file.endsWith('.dis') || file.endsWith('.tbl')) {
+  if (file.endsWith('.ctb') || file.endsWith('.cti') || file.endsWith('.uti') || file.endsWith('.utb') || file.endsWith('.dis') || file.endsWith('.tbl')) {
     const src = join(localTablesDir, file);
     const dest = join(tablesDir, file);
     copyFileSync(src, dest);
