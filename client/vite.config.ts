@@ -5,9 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
 
-  // Set base to the repo name for GitHub Pages deployment.
+  // Set base to '/' for custom domain deployments.
   // Override via VITE_BASE_URL env var if needed.
-  base: process.env.VITE_BASE_URL ?? '/Graham_Braille_Editor/',
+  base: process.env.VITE_BASE_URL ?? '/',
 
   worker: {
     // ES module workers allow static/dynamic imports and fetch()-based loading
