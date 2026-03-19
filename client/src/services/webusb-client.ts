@@ -12,7 +12,7 @@ declare global {
     }
 }
 
-export async function printBrfWebUSB(brf: string): Promise<void> {
+export async function printBrfWebUSB(data: Uint8Array): Promise<void> {
     if (!('usb' in navigator)) {
         throw new Error('WebUSB is not supported in this browser.');
     }
@@ -63,11 +63,7 @@ export async function printBrfWebUSB(brf: string): Promise<void> {
         await device.claimInterface(interfaceNumber);
 
         try {
-            // Encode BRF to raw bytes
-            const encoder = new TextEncoder();
-            const data = encoder.encode(brf);
-
-            // Send data to the embosser
+            // Send binary data directly to the embosser
             const result = await device.transferOut(endpointNumber, data);
             if (result.status !== 'ok') {
                 throw new Error(`USB transfer failed with status: ${result.status}`);

@@ -70,9 +70,10 @@ export async function checkBridgeStatus(): Promise<boolean> {
  * @param brf      The BRF content as a plain string (UTF-8).
  * @throws         If the bridge is unreachable or returns an error.
  */
-export async function printBrf(printer: string, brf: string): Promise<void> {
-  // Encode BRF as Base64 for transport.
-  const data = btoa(unescape(encodeURIComponent(brf)));
+export async function printBrf(printer: string, rawData: Uint8Array): Promise<void> {
+  // Encode raw binary bytes as Base64 for transport to the Go Bridge
+  const binaryString = Array.from(rawData).map(b => String.fromCharCode(b)).join('');
+  const data = btoa(binaryString);
 
   const res = await fetch(`${BRIDGE_BASE}/print`, {
     method: 'POST',

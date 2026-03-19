@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { printBrf } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
+import { GenericTextEmbosser } from '../services/embossers/GenericTextEmbosser';
+import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 
 interface PrintPanelProps {
   brf: string;
@@ -17,6 +19,7 @@ interface PrintPanelProps {
  */
 export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPanelProps) {
   const [printerName, setPrinterName] = useState('');
+  const [selectedDriverId, setSelectedDriverId] = useState('generic');
   const [status, setStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -32,10 +35,13 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
     setStatus('printing');
     setErrorMsg('');
     try {
+      const embosser = EmbosserFactory.getEmbosser(selectedDriverId);
+      const bytes = embosser.generateBytes(brf, { copies: 1 });
+
       if (useWebUSB) {
-        await printBrfWebUSB(brf);
+        await printBrfWebUSB(bytes);
       } else {
-        await printBrf(printerName.trim(), brf);
+        await printBrf(printerName.trim(), bytes);
       }
       setStatus('success');
     } catch (err) {
@@ -64,6 +70,14 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
             />
           </>
         )}
+        <select
+          className="printer-input"
+          value={selectedDriverId}
+          onChange={(e) => setSelectedDriverId(e.target.value)}
+          style={{ width: '130px', marginLeft: '0.4rem' }}
+        >
+          {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+        </select>
         <button
           className="toolbar-btn toolbar-btn--primary"
           onClick={handlePrint}
@@ -108,6 +122,18 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
           />
         </>
       )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem' }}>
+        <label htmlFor="embosser-driver">Embosser Driver Model</label>
+        <select
+          id="embosser-driver"
+          value={selectedDriverId}
+          onChange={e => setSelectedDriverId(e.target.value)}
+          style={{ padding: '0.4rem' }}
+        >
+          {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+        </select>
+      </div>
 
       <button
         onClick={handlePrint}
