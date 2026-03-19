@@ -59,6 +59,26 @@ export async function checkBridgeStatus(): Promise<boolean> {
   }
 }
 
+/**
+ * Fetch the list of installed printers from the bridge.
+ */
+export async function getPrinters(): Promise<string[]> {
+  try {
+    const res = await fetch(`${BRIDGE_BASE}/printers`, {
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (!res.ok) return [];
+    const _printers = await res.json();
+    if (Array.isArray(_printers)) {
+      // Filter out null or undefined names and convert to string
+      return _printers.filter(p => !!p).map(String);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Print
 // ---------------------------------------------------------------------------

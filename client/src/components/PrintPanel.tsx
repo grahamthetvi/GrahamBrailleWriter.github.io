@@ -1,5 +1,5 @@
-import { useState, type ChangeEvent } from 'react';
-import { printBrf } from '../services/bridge-client';
+import { useState, useEffect, type ChangeEvent } from 'react';
+import { printBrf, getPrinters } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 import { isChromeOS, isMac, isWindows, isLinux } from '../utils/os';
@@ -22,6 +22,40 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
   const [selectedDriverId, setSelectedDriverId] = useState('generic');
   const [status, setStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
+  const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
+
+  useEffect(() => {
+    if (bridgeConnected && !useWebUSB) {
+      setIsLoadingPrinters(true);
+      getPrinters().then(printers => {
+        setAvailablePrinters(printers);
+        setIsLoadingPrinters(false);
+        if (printers.length > 0 && !printerName) {
+          handlePrinterSelect(printers[0]);
+        }
+      }).catch(() => setIsLoadingPrinters(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridgeConnected, useWebUSB]);
+
+  function handlePrinterSelect(name: string) {
+    setPrinterName(name);
+    const lower = name.toLowerCase();
+    if (lower.includes('viewplus') || lower.includes('columbia') || lower.includes('emprint') || lower.includes('max') || lower.includes('premier') || lower.includes('rogue')) {
+      setSelectedDriverId('viewplus');
+    } else if (lower.includes('romeo') || lower.includes('juliet') || lower.includes('enabling') || lower.includes('marathon') || lower.includes('thomas')) {
+      setSelectedDriverId('enabling-romeo');
+    } else if (lower.includes('index') || lower.includes('everest') || lower.includes('basic-') || lower.includes('braille box')) {
+      setSelectedDriverId('index-basic');
+    } else if (lower.includes('braillo')) {
+      setSelectedDriverId('braillo-200');
+    } else if (lower.includes('pageblaster')) {
+      setSelectedDriverId('aph-pageblaster');
+    } else if (lower.includes('pixblaster')) {
+      setSelectedDriverId('aph-pixblaster');
+    }
+  }
 
   async function handlePrint() {
     if (!useWebUSB && !printerName.trim()) {
@@ -73,15 +107,21 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         {!useWebUSB && (
           <>
             <label htmlFor="printer-name-compact">Printer</label>
-            <input
+            <select
               id="printer-name-compact"
-              type="text"
               className="printer-input"
-              placeholder="e.g. ViewPlus Columbia"
               value={printerName}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setPrinterName(e.target.value)}
-              disabled={!bridgeConnected}
-            />
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => handlePrinterSelect(e.target.value)}
+              disabled={!bridgeConnected || isLoadingPrinters}
+            >
+              {isLoadingPrinters ? (
+                <option>Loading...</option>
+              ) : availablePrinters.length === 0 ? (
+                <option value="">No printers found</option>
+              ) : (
+                availablePrinters.map(p => <option key={p} value={p}>{p}</option>)
+              )}
+            </select>
           </>
         )}
         <select
@@ -126,15 +166,22 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         </p>
       ) : (
         <>
-          <label htmlFor="printer-name">Printer Name</label>
-          <input
+          <label htmlFor="printer-name">Select Printer</label>
+          <select
             id="printer-name"
-            type="text"
-            placeholder="e.g. ViewPlus Columbia"
             value={printerName}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setPrinterName(e.target.value)}
-            disabled={!bridgeConnected}
-          />
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => handlePrinterSelect(e.target.value)}
+            disabled={!bridgeConnected || isLoadingPrinters}
+            style={{ padding: '0.4rem', marginBottom: '1rem' }}
+          >
+            {isLoadingPrinters ? (
+              <option>Loading...</option>
+            ) : availablePrinters.length === 0 ? (
+              <option value="">No printers found on computer</option>
+            ) : (
+              availablePrinters.map(p => <option key={p} value={p}>{p}</option>)
+            )}
+          </select>
         </>
       )}
 

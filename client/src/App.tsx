@@ -413,6 +413,29 @@ export default function App() {
               {/* Page layout settings panel */}
               {showPageSettings && (
                 <div id="page-settings-panel" className="page-settings-panel">
+                  <div className="layout-presets" style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    <button
+                      className={`toolbar-btn ${pageSettings.cellsPerRow === 32 && pageSettings.linesPerPage === 25 ? 'toolbar-btn--active' : ''}`}
+                      onClick={() => setPageSettings({ cellsPerRow: 32, linesPerPage: 25 })}
+                      title="Standard 8.5x11 inch paper"
+                    >
+                      8.5x11in
+                    </button>
+                    <button
+                      className={`toolbar-btn ${pageSettings.cellsPerRow === 40 && pageSettings.linesPerPage === 25 ? 'toolbar-btn--active' : ''}`}
+                      onClick={() => setPageSettings({ cellsPerRow: 40, linesPerPage: 25 })}
+                      title="Wide 11x11.5 inch tractor feed paper"
+                    >
+                      11x11.5in
+                    </button>
+                    <button
+                      className={`toolbar-btn ${!(pageSettings.cellsPerRow === 32 && pageSettings.linesPerPage === 25) && !(pageSettings.cellsPerRow === 40 && pageSettings.linesPerPage === 25) ? 'toolbar-btn--active' : ''}`}
+                      style={{ cursor: 'default' }}
+                      title="Custom dimensions"
+                    >
+                      Custom
+                    </button>
+                  </div>
                   <label className="settings-field">
                     <span>Cells / row</span>
                     <input
@@ -436,7 +459,7 @@ export default function App() {
                     />
                   </label>
                   <p className="settings-hint">
-                    Common: 40 × 25 (letter), 32 × 28 (A4)
+                    Common: 32 × 25 (8.5x11), 40 × 25 (11x11.5)
                   </p>
                 </div>
               )}
