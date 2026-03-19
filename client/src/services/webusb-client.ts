@@ -17,7 +17,7 @@ export async function printBrfWebUSB(data: Uint8Array): Promise<void> {
         throw new Error('WebUSB is not supported in this browser.');
     }
 
-    let device: USBDevice;
+    let device: any;
     try {
         // Prompt user to select a USB device (empty filters allow any device)
         device = await navigator.usb.requestDevice({ filters: [] });

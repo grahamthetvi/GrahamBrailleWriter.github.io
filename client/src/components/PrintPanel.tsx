@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { printBrf } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
-import { GenericTextEmbosser } from '../services/embossers/GenericTextEmbosser';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 
 interface PrintPanelProps {

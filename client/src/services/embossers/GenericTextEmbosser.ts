@@ -29,7 +29,6 @@ export class GenericTextEmbosser implements Embosser {
         const lines = brf.split(/\r?\n/);
 
         // Default page settings
-        const _charsPerLine = 40;
         const linesPerPage = 25;
 
         let formattedBrf = '';

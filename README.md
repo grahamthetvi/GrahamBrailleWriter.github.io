@@ -1,7 +1,11 @@
 # Graham Braille Editor & Local Print Bridge
 
 Graham Braille Editor is a client-side web application that converts text into any liblouis braille table entirely in your browser. 
-However, web browsers cannot communicate directly with physical Braille embossers for security reasons. To solve this, the **Graham Braille Editor Bridge** is a small, lightweight companion app that runs in your system tray and securely routes braille files from the web app to your local embosser.
+It features **Native TypeScript Embosser Drivers** directly inside the browser, allowing it to generate precise physical hardware commands for various Braille Embossers (including Generic Text, Enabling Technologies Romeo/Juliet, Index Braille, and Braillo).
+
+#### 🔌 Connecting to your Embosser
+- **ChromeOS / WebUSB:** Because the editor has native driver support, you can print *directly* from your browser to your embosser using WebUSB. Just connect your embosser, select your model, and hit Print. No bridge required!
+- **Windows / macOS / Linux:** Desktop web browsers do not always have full hardware USB access. To solve this, the **Graham Braille Editor Bridge** is a small, lightweight companion app that runs in your system tray and securely routes the pre-formatted braille commands from the web app straight to your local print spooler.
 
 This guide is primarily for **School IT Administrators** who are setting up the Graham Braille Editor Bridge on student or staff devices.
 
@@ -64,3 +68,14 @@ Once running, the bridge operates silently in the background and places an icon 
 - Right-clicking the tray icon allows you to check its status, easily open the Graham Braille Editor Editor in your browser, or cleanly quit the background process.
 - The app listens on `localhost:8080`. It only accepts specific local CORS requests originating from the Graham Braille Editor web application, effectively blocking external or malicious sites from printing directly to your embosser without your permission.
 - Make sure your Braille embosser is physically connected (USB/Network) and recognized by your operating system's printer settings!
+
+## 🖨️ Supported Embossers
+
+The Graham Braille Editor natively supports generating hardware-specific commands for the following embosser families:
+
+1. **Generic Text Embossers** (Standard CR/LF and Form Feed support)
+2. **Enabling Technologies** (Romeo, Juliet, Basic models)
+3. **Index Braille** (Basic-D, Everest)
+4. **Braillo** (200, 270)
+
+*(Note: ViewPlus embossers currently rely on their own desktop graphical driver, so they should be selected as "Generic Text" when printing via the Bridge).*

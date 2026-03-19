@@ -1,14 +1,14 @@
-import { Embosser, EmbossingAttributeSet, Rectangle } from './Embosser';
+import type { Embosser, EmbossingAttributeSet, Rectangle } from './Embosser';
 
-enum Duplex {
-    INTERPOINT = 64, // '@'
-    P1ONLY = 65,     // 'A'
-    P2ONLY = 66      // 'B'
-}
+const Duplex = {
+    INTERPOINT: 64, // '@'
+    P1ONLY: 65,     // 'A'
+    P2ONLY: 66      // 'B'
+} as const;
 
-enum CellType {
-    NLS = 64 // '@'
-}
+const CellType = {
+    NLS: 64 // '@'
+} as const;
 
 export class EnablingTechnologiesEmbosser implements Embosser {
     private id: string;
@@ -38,7 +38,7 @@ export class EnablingTechnologiesEmbosser implements Embosser {
         return 64 + value;
     }
 
-    generateBytes(brf: string, attributes: EmbossingAttributeSet): Uint8Array {
+    generateBytes(brf: string, _attributes: EmbossingAttributeSet): Uint8Array {
         const encoder = new TextEncoder();
         const brfBytes = encoder.encode(brf);
 

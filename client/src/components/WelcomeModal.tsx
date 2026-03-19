@@ -74,26 +74,28 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
             </div>
           </section>
 
-          {/* 2. Bridge App */}
+          {/* 2. Embossing & Printing */}
           <section className="welcome-section">
             <div className="welcome-section-icon" aria-hidden="true">🖨</div>
             <div className="welcome-bridge-content">
-              <h3>Bridge App &mdash; Direct Embosser Printing</h3>
+              <h3>Seamless Embossing (WebUSB & Bridge)</h3>
               <p>
-                To print directly to an embosser, download the <strong>Graham Bridge</strong> helper app for your platform:
+                We now feature <strong>Native Embosser Drivers</strong> for exact formatting on Enabling Technologies, Index, and Braillo embossers!
+                <strong> ChromeOS</strong> users can leverage WebUSB to print directly—no apps required.
+                <strong> Windows/macOS/Linux</strong> users must run our lightweight <strong>Graham Bridge</strong> background app to route braille reliably to their printer.
               </p>
 
               <div className="install-grid">
                 <div className="install-card">
-                  <h4>🪟 Windows</h4>
+                  <h4>🪟 Windows Bridge</h4>
                   <ol>
-                    <li>Download &amp; extract the Windows zip</li>
+                    <li>Download &amp; extract the zip</li>
                     <li>Move <code>.exe</code> to a safe folder</li>
                     <li>Add to <strong>Startup</strong> folder</li>
                   </ol>
                 </div>
                 <div className="install-card">
-                  <h4>🍎 macOS</h4>
+                  <h4>🍎 macOS Bridge</h4>
                   <ol>
                     <li>Drag <code>.app</code> to Applications</li>
                     <li>Right-click &rarr; <strong>Open</strong> first time</li>
@@ -101,7 +103,7 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
                   </ol>
                 </div>
                 <div className="install-card">
-                  <h4>🐧 Linux</h4>
+                  <h4>🐧 Linux Bridge</h4>
                   <ol>
                     <li>Move binary to <code>/usr/local/bin</code></li>
                     <li>Install <code>.desktop</code> shortcut</li>
@@ -112,11 +114,8 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
 
               <div className="welcome-footer-links">
                 <a href="https://github.com/grahamthetvi/Graham_Braille_Editor/releases" target="_blank" rel="noopener noreferrer" className="welcome-btn-secondary">
-                  📥 Download Latest Release
+                  📥 Download Desktop Bridge
                 </a>
-                <p className="welcome-note">
-                  The bridge is only needed for direct printing. Download &amp; translation work fully in-browser without it.
-                </p>
               </div>
             </div>
           </section>
