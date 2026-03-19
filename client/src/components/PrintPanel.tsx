@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { printBrf } from '../services/bridge-client';
+import { printBrfWebUSB } from '../services/webusb-client';
 
 interface PrintPanelProps {
   brf: string;
   bridgeConnected: boolean;
+  useWebUSB?: boolean;
   /** Renders as a compact horizontal bar for use inside the app header. */
   compact?: boolean;
 }
@@ -13,13 +15,13 @@ interface PrintPanelProps {
  * Sends the translated BRF content to the local bridge binary.
  * When `compact` is true, renders horizontally for use inside the header toolbar.
  */
-export function PrintPanel({ brf, bridgeConnected, compact }: PrintPanelProps) {
+export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPanelProps) {
   const [printerName, setPrinterName] = useState('');
   const [status, setStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   async function handlePrint() {
-    if (!printerName.trim()) {
+    if (!useWebUSB && !printerName.trim()) {
       setErrorMsg('Please enter a printer name.');
       return;
     }
@@ -30,7 +32,11 @@ export function PrintPanel({ brf, bridgeConnected, compact }: PrintPanelProps) {
     setStatus('printing');
     setErrorMsg('');
     try {
-      await printBrf(printerName.trim(), brf);
+      if (useWebUSB) {
+        await printBrfWebUSB(brf);
+      } else {
+        await printBrf(printerName.trim(), brf);
+      }
       setStatus('success');
     } catch (err) {
       setStatus('error');
@@ -41,25 +47,29 @@ export function PrintPanel({ brf, bridgeConnected, compact }: PrintPanelProps) {
   if (compact) {
     return (
       <div className="print-panel-compact">
-        {!bridgeConnected && (
+        {!useWebUSB && !bridgeConnected && (
           <span className="bridge-badge" role="status">Bridge offline</span>
         )}
-        <label htmlFor="printer-name-compact">Printer</label>
-        <input
-          id="printer-name-compact"
-          type="text"
-          className="printer-input"
-          placeholder="e.g. ViewPlus Columbia"
-          value={printerName}
-          onChange={(e) => setPrinterName(e.target.value)}
-          disabled={!bridgeConnected}
-        />
+        {!useWebUSB && (
+          <>
+            <label htmlFor="printer-name-compact">Printer</label>
+            <input
+              id="printer-name-compact"
+              type="text"
+              className="printer-input"
+              placeholder="e.g. ViewPlus Columbia"
+              value={printerName}
+              onChange={(e) => setPrinterName(e.target.value)}
+              disabled={!bridgeConnected}
+            />
+          </>
+        )}
         <button
           className="toolbar-btn toolbar-btn--primary"
           onClick={handlePrint}
-          disabled={!bridgeConnected || status === 'printing'}
+          disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
         >
-          {status === 'printing' ? 'Sending…' : 'Print'}
+          {status === 'printing' ? 'Sending…' : useWebUSB ? 'Select & Print (USB)' : 'Print'}
         </button>
         {status === 'success' && (
           <span className="print-status-ok" aria-live="polite">✓ Sent</span>
@@ -73,29 +83,37 @@ export function PrintPanel({ brf, bridgeConnected, compact }: PrintPanelProps) {
 
   return (
     <div className="print-panel">
-      <h3>Print to Embosser</h3>
+      <h3>{useWebUSB ? 'WebUSB Embossing' : 'Print to Embosser'}</h3>
 
-      {!bridgeConnected && (
+      {!useWebUSB && !bridgeConnected && (
         <p className="bridge-warning" role="status">
           Bridge not connected. Download and run the bridge binary to enable printing.
         </p>
       )}
 
-      <label htmlFor="printer-name">Printer Name</label>
-      <input
-        id="printer-name"
-        type="text"
-        placeholder="e.g. ViewPlus Columbia"
-        value={printerName}
-        onChange={(e) => setPrinterName(e.target.value)}
-        disabled={!bridgeConnected}
-      />
+      {useWebUSB ? (
+        <p className="webusb-info" style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+          Select your embosser securely directly from the browser window prompt.
+        </p>
+      ) : (
+        <>
+          <label htmlFor="printer-name">Printer Name</label>
+          <input
+            id="printer-name"
+            type="text"
+            placeholder="e.g. ViewPlus Columbia"
+            value={printerName}
+            onChange={(e) => setPrinterName(e.target.value)}
+            disabled={!bridgeConnected}
+          />
+        </>
+      )}
 
       <button
         onClick={handlePrint}
-        disabled={!bridgeConnected || status === 'printing'}
+        disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
       >
-        {status === 'printing' ? 'Printing...' : 'Print'}
+        {status === 'printing' ? 'Printing...' : useWebUSB ? 'Select Embosser & Print' : 'Print'}
       </button>
 
       {status === 'success' && (

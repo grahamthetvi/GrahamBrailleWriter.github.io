@@ -1,5 +1,6 @@
 interface StatusBarProps {
   bridgeConnected: boolean;
+  useWebUSB?: boolean;
   /** Length of the translated BRF string in bytes. */
   brfLength: number;
   /** Word count of the source text. */
@@ -18,6 +19,7 @@ interface StatusBarProps {
  */
 export function StatusBar({
   bridgeConnected,
+  useWebUSB,
   brfLength,
   wordCount,
   charCount,
@@ -33,10 +35,10 @@ export function StatusBar({
     >
       <span
         className={`bridge-indicator ${bridgeConnected ? 'connected' : 'disconnected'}`}
-        title={bridgeConnected ? 'Bridge running on localhost:8080' : 'Bridge not detected'}
-        aria-label={bridgeConnected ? 'Bridge connected' : 'Bridge offline'}
+        title={useWebUSB ? 'WebUSB Embossing Available' : bridgeConnected ? 'Bridge running on localhost:8080' : 'Bridge not detected'}
+        aria-label={useWebUSB ? 'WebUSB ready' : bridgeConnected ? 'Bridge connected' : 'Bridge offline'}
       >
-        {bridgeConnected ? '● Bridge Connected' : '○ Bridge Offline'}
+        {useWebUSB ? '● WebUSB Ready' : bridgeConnected ? '● Bridge Connected' : '○ Bridge Offline'}
       </span>
 
       {charCount > 0 && (

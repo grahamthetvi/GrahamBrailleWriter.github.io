@@ -9,6 +9,7 @@ import { useBraille, type MathCode } from './hooks/useBraille';
 import { asciiToUnicodeBraille } from './utils/braille';
 import { formatBrfPages, formatBrfForOutput } from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
+import { canUseWebUSB } from './utils/os';
 import './App.css';
 
 /**
@@ -111,10 +112,12 @@ export default function App() {
   const charCount = inputText.length;
 
   // ── Bridge status polling ────────────────────────────────────────────────
+  const useWebUSB = canUseWebUSB();
   useEffect(() => {
+    if (useWebUSB) return; // No need to poll bridge on ChromeOS
     const stopPolling = startBridgeStatusPolling(setBridgeConnected);
     return stopPolling;
-  }, []);
+  }, [useWebUSB]);
 
   // ── Text change handler (called by Editor with debounced value) ──────────
   const handleTextChange = useCallback((text: string) => {
@@ -360,7 +363,7 @@ export default function App() {
         {/* Compact print bar — full-width row below the toolbar */}
         {showPrint && (
           <div className="header-print-bar">
-            <PrintPanel brf={translatedText} bridgeConnected={bridgeConnected} compact />
+            <PrintPanel brf={translatedText} bridgeConnected={bridgeConnected} useWebUSB={useWebUSB} compact />
           </div>
         )}
       </header>
@@ -491,6 +494,7 @@ export default function App() {
       {/* ── Status bar ───────────────────────────────────────────────────── */}
       <StatusBar
         bridgeConnected={bridgeConnected}
+        useWebUSB={useWebUSB}
         brfLength={translatedText.length}
         wordCount={wordCount}
         charCount={charCount}
