@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { printBrf } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
