@@ -19,3 +19,18 @@ export function supportsWebUSB(): boolean {
 export function canUseWebUSB(): boolean {
     return isChromeOS() && supportsWebUSB();
 }
+
+export function isMac(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    return /Mac/.test(navigator.userAgent);
+}
+
+export function isWindows(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    return /Win/.test(navigator.userAgent);
+}
+
+export function isLinux(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    return /Linux/.test(navigator.userAgent) && !isChromeOS();
+}

@@ -21,7 +21,7 @@ export async function printBrfWebUSB(data: Uint8Array): Promise<void> {
     try {
         // Prompt user to select a USB device (empty filters allow any device)
         device = await navigator.usb.requestDevice({ filters: [] });
-    } catch (err) {
+    } catch {
         throw new Error('No device selected or permission denied.');
     }
 

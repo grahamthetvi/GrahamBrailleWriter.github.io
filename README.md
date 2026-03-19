@@ -78,4 +78,6 @@ The Graham Braille Editor natively supports generating hardware-specific command
 3. **Index Braille** (Basic-D, Everest)
 4. **Braillo** (200, 270)
 
-*(Note: ViewPlus embossers currently rely on their own desktop graphical driver, so they should be selected as "Generic Text" when printing via the Bridge).*
+*(Note regarding ViewPlus embossers: ViewPlus relies heavily on proprietary graphical drivers.*
+*- If using ChromeOS or Linux, ViewPlus generic text support is **experimental** and may not work.*
+*- If using Windows/macOS with the Bridge, ensure you have the official ViewPlus Tiger Printer Driver installed for your specific embosser.)*

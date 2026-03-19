@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import { printBrf } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
+import { isChromeOS, isMac, isWindows, isLinux } from '../utils/os';
 
 interface PrintPanelProps {
   brf: string;
@@ -49,6 +50,20 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
     }
   }
 
+  const renderViewPlusWarning = () => {
+    if (selectedDriverId !== 'viewplus') return null;
+
+    const style = { fontSize: '0.8rem', marginTop: '0.4rem', lineHeight: 1.3 };
+    if (isChromeOS()) {
+      return <div style={{ ...style, color: '#d97706' }}>⚠️ <strong>ChromeOS Notice:</strong> Direct WebUSB printing to ViewPlus is experimental and might not work.</div>;
+    } else if (isWindows() || isMac()) {
+      return <div style={{ ...style, color: '#0369a1' }}>ℹ️ <strong>Driver Required:</strong> Ensure you have the official ViewPlus printer driver installed for your specific embosser.</div>;
+    } else if (isLinux()) {
+      return <div style={{ ...style, color: '#d97706' }}>⚠️ <strong>Linux Notice:</strong> ViewPlus bridging on Linux is experimental and might not work.</div>;
+    }
+    return null;
+  };
+
   if (compact) {
     return (
       <div className="print-panel-compact">
@@ -64,7 +79,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
               className="printer-input"
               placeholder="e.g. ViewPlus Columbia"
               value={printerName}
-              onChange={(e) => setPrinterName(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPrinterName(e.target.value)}
               disabled={!bridgeConnected}
             />
           </>
@@ -72,7 +87,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         <select
           className="printer-input"
           value={selectedDriverId}
-          onChange={(e) => setSelectedDriverId(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedDriverId(e.target.value)}
           style={{ width: '130px', marginLeft: '0.4rem' }}
         >
           {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
@@ -84,6 +99,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         >
           {status === 'printing' ? 'Sending…' : useWebUSB ? 'Select & Print (USB)' : 'Print'}
         </button>
+        {renderViewPlusWarning()}
         {status === 'success' && (
           <span className="print-status-ok" aria-live="polite">✓ Sent</span>
         )}
@@ -116,7 +132,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
             type="text"
             placeholder="e.g. ViewPlus Columbia"
             value={printerName}
-            onChange={(e) => setPrinterName(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setPrinterName(e.target.value)}
             disabled={!bridgeConnected}
           />
         </>
@@ -127,11 +143,12 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         <select
           id="embosser-driver"
           value={selectedDriverId}
-          onChange={e => setSelectedDriverId(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedDriverId(e.target.value)}
           style={{ padding: '0.4rem' }}
         >
           {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
+        {renderViewPlusWarning()}
       </div>
 
       <button

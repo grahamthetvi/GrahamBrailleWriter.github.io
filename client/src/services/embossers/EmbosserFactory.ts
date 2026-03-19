@@ -30,6 +30,21 @@ export const EMBOSSER_LIST: EmbosserDefinition[] = [
         id: 'braillo-200',
         name: 'Braillo (200 / 270)',
         creator: () => new BrailloEmbosser('braillo-200', 'Braillo 200/270', { width: 300, height: 300 }, { width: 10, height: 10 }, true)
+    },
+    {
+        id: 'aph-pageblaster',
+        name: 'APH PageBlaster',
+        creator: () => new IndexBrailleEmbosser('aph-pageblaster', 'PageBlaster', { width: 300, height: 300 }, { width: 10, height: 10 })
+    },
+    {
+        id: 'aph-pixblaster',
+        name: 'APH PixBlaster',
+        creator: () => new EnablingTechnologiesEmbosser('aph-pixblaster', 'PixBlaster', { width: 300, height: 300 }, { width: 10, height: 10 }, true)
+    },
+    {
+        id: 'viewplus',
+        name: 'ViewPlus (via Bridge / Generic)',
+        creator: () => new GenericTextEmbosser('viewplus', 'ViewPlus')
     }
 ];
 
