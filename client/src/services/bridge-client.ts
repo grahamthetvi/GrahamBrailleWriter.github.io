@@ -65,7 +65,7 @@ export async function checkBridgeStatus(): Promise<boolean> {
 export async function getPrinters(): Promise<string[]> {
   try {
     const res = await fetch(`${BRIDGE_BASE}/printers`, {
-      signal: AbortSignal.timeout(2_000),
+      signal: AbortSignal.timeout(10_000), // Increase timeout as PowerShell on backend takes a few seconds
     });
     if (!res.ok) return [];
     const _printers = await res.json();

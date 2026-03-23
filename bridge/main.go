@@ -37,6 +37,10 @@ func withCORS(next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		
+		// Needed for Chrome Private Network Access (PNA)
+		// Allows public websites (like GitHub Pages) to fetch from this localhost bridge
+		w.Header().Set("Access-Control-Allow-Private-Network", "true")
 
 		// Handle pre-flight
 		if r.Method == http.MethodOptions {
