@@ -252,12 +252,12 @@
   height: 20px;
   border-radius: 50%;
   background: transparent;
-  border: 2px solid #ccc;
+  border: 2px solid #666;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  color: #aaa;
+  color: #333;
   font-weight: bold;
   transition: all 0.2s;
 }
@@ -320,6 +320,7 @@
 }
 
 .perkins-spacebar.active .spacebar-label {
-  color: #bbb;
+  color: var(--primary);
+  text-shadow: 0 0 5px rgba(255,255,255,0.8);
 }
 
