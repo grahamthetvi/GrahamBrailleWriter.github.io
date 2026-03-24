@@ -8,6 +8,7 @@ export interface EmbossingAttributeSet {
     cellsPerRow?: number;
     linesPerPage?: number;
     showPageNumbers?: boolean;
+    leftMargin?: number;
 }
 
 export interface Embosser {

@@ -28,8 +28,9 @@ export class GenericTextEmbosser implements Embosser {
         const cells = attributes.cellsPerRow ?? 40;
         const lines = attributes.linesPerPage ?? 25;
         const showNumbers = attributes.showPageNumbers ?? false;
+        const margin = attributes.leftMargin ?? 0;
         
-        const formattedBrf = formatBrfForOutput(brf, cells, lines, showNumbers);
+        const formattedBrf = formatBrfForOutput(brf, cells, lines, showNumbers, margin);
         const encoder = new TextEncoder();
         return encoder.encode(formattedBrf);
     }

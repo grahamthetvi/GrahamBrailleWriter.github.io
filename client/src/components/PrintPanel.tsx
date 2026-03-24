@@ -10,7 +10,7 @@ interface PrintPanelProps {
   useWebUSB?: boolean;
   /** Renders as a compact horizontal bar for use inside the app header. */
   compact?: boolean;
-  pageSettings?: { cellsPerRow: number; linesPerPage: number; showPageNumbers?: boolean };
+  pageSettings?: { cellsPerRow: number; linesPerPage: number; showPageNumbers?: boolean; leftMargin?: number };
 }
 
 /**
@@ -71,12 +71,13 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact, pageSetti
     setErrorMsg('');
     try {
       const embosser = EmbosserFactory.getEmbosser(selectedDriverId);
-      const formattingSettings = pageSettings || { cellsPerRow: 40, linesPerPage: 25, showPageNumbers: false };
+      const formattingSettings = pageSettings || { cellsPerRow: 40, linesPerPage: 25, showPageNumbers: false, leftMargin: 0 };
       const bytes = embosser.generateBytes(brf, { 
         copies: 1,
         cellsPerRow: formattingSettings.cellsPerRow,
         linesPerPage: formattingSettings.linesPerPage,
-        showPageNumbers: formattingSettings.showPageNumbers
+        showPageNumbers: formattingSettings.showPageNumbers,
+        leftMargin: formattingSettings.leftMargin
       });
 
       if (useWebUSB) {

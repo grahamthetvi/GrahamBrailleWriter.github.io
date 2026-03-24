@@ -74,23 +74,28 @@ export function formatBrfPages(
   cellsPerRow: number,
   linesPerPage: number,
   includePageNumbers: boolean = false,
+  leftMargin: number = 0,
 ): string[] {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
 
   // In Unicode braille, ASCII space (0x20) was converted to U+2800 (blank braille pattern)
   const BRAILLE_SPACE = '\u2800';
+  const marginStr = BRAILLE_SPACE.repeat(Math.max(0, leftMargin));
 
   const rawLines = unicodeBraille.split('\n');
   const wrappedLines: string[] = [];
 
   for (const line of rawLines) {
     if (line.length === 0) {
-      wrappedLines.push(''); // preserve blank lines (e.g. from Enter key presses)
+      wrappedLines.push(marginStr); // preserve blank lines (e.g. from Enter key presses)
     } else if (line.length <= cells) {
-      wrappedLines.push(line); // fits — no wrapping needed
+      wrappedLines.push(marginStr + line); // fits — no wrapping needed
     } else {
-      wrappedLines.push(...wrapBrailleLine(line, cells, BRAILLE_SPACE));
+      const parts = wrapBrailleLine(line, cells, BRAILLE_SPACE);
+      for (const p of parts) {
+        wrappedLines.push(marginStr + p);
+      }
     }
   }
 
@@ -113,7 +118,7 @@ export function formatBrfPages(
       }
       const pageNumStr = toBrailleNumber(Math.floor(i / contentLines) + 1);
       const unicodePageNum = pageNumStr.split('').map(c => String.fromCharCode(c.charCodeAt(0) - 0x20 + 0x2800)).join('');
-      chunk.push(unicodePageNum.padStart(cells, BRAILLE_SPACE));
+      chunk.push(marginStr + unicodePageNum.padStart(cells, BRAILLE_SPACE));
     }
     pages.push(chunk.join('\n'));
   }
@@ -131,22 +136,27 @@ export function formatBrfForOutput(
   cellsPerRow: number,
   linesPerPage: number,
   includePageNumbers: boolean = false,
+  leftMargin: number = 0,
 ): string {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
+  const marginStr = ' '.repeat(Math.max(0, leftMargin));
 
   const rawLines = rawBrf.split('\n');
   const wrapped: string[] = [];
 
   for (const line of rawLines) {
     if (!line) {
-      wrapped.push('');
+      wrapped.push(marginStr);
       continue;
     }
     if (line.length <= cells) {
-      wrapped.push(line);
+      wrapped.push(marginStr + line);
     } else {
-      wrapped.push(...wrapBrailleLine(line, cells, ' '));
+      const parts = wrapBrailleLine(line, cells, ' ');
+      for (const p of parts) {
+        wrapped.push(marginStr + p);
+      }
     }
   }
 
@@ -166,7 +176,7 @@ export function formatBrfForOutput(
         chunk.push('');
       }
       const pageNumStr = toBrailleNumber(Math.floor(i / contentLines) + 1);
-      chunk.push(pageNumStr.padStart(cells, ' '));
+      chunk.push(marginStr + pageNumStr.padStart(cells, ' '));
     }
     pageChunks.push(chunk.join('\r\n'));
   }
