@@ -251,14 +251,15 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
-  border: 2px solid #000;
+  background: #000;
+  border: 2px solid #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  color: #000;
+  color: #fff;
   font-weight: 900;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
   transition: all 0.2s;
 }
 

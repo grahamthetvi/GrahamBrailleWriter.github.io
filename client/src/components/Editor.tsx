@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as monaco from 'monaco-editor';
 
 interface EditorProps {
@@ -19,12 +19,16 @@ interface EditorProps {
   scrollPercentage?: number;
 }
 
+export interface EditorHandle {
+  insertTextAtCursor: (text: string) => void;
+}
+
 /**
  * Monaco Editor wrapper component.
  * Stores the editor value in a ref (not state) to avoid re-render storms
  * on every keystroke. Debounces translation calls by 500ms.
  */
-export function Editor({
+export const Editor = forwardRef<EditorHandle, EditorProps>(({
   onTextChange,
   initialValue = '',
   monacoTheme = 'vs-dark',
@@ -32,7 +36,7 @@ export function Editor({
   cellsPerRow = 40,
   onScrollPercentageChange,
   scrollPercentage,
-}: EditorProps) {
+}, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,6 +47,24 @@ export function Editor({
   useEffect(() => {
     onTextChangeRef.current = onTextChange;
   }, [onTextChange]);
+
+  useImperativeHandle(ref, () => ({
+    insertTextAtCursor: (text: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const position = editor.getPosition();
+      if (!position) return;
+      editor.executeEdits('insert-api', [
+        {
+          range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+          text: text,
+          forceMoveMarkers: true,
+        }
+      ]);
+      editor.pushUndoStop();
+      editor.focus();
+    }
+  }));
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -141,4 +163,4 @@ export function Editor({
       style={{ width: '100%', height: '100%', minHeight: '400px' }}
     />
   );
-}
+});

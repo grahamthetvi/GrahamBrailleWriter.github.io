@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Editor } from './components/Editor';
+import { Editor, type EditorHandle } from './components/Editor';
+import { ChartGenerator } from './components/ChartGenerator';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -53,6 +54,8 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(
     () => !localStorage.getItem('graham-braille-welcome-seen')
   );
+  const [showChartGenerator, setShowChartGenerator] = useState(false);
+  const editorRef = useRef<EditorHandle>(null);
 
   function handleWelcomeClose() {
     localStorage.setItem('graham-braille-welcome-seen', '1');
@@ -297,6 +300,17 @@ export default function App() {
             Copy AI Prompt
           </button>
 
+          {/* Chart Generator */}
+          <button
+            className={`toolbar-btn${showChartGenerator ? ' toolbar-btn--active' : ''}`}
+            onClick={() => setShowChartGenerator(true)}
+            disabled={isPerkinsMode}
+            title="Create a data-driven tactile braille chart"
+            aria-label="Create Braille Chart"
+          >
+            📊 Create Chart
+          </button>
+
           {/* File upload — input is screen-reader-hidden; button is the control */}
           <input
             ref={fileInputRef}
@@ -385,6 +399,7 @@ export default function App() {
         <section className="editor-pane">
           <div className="pane-title">Text Input</div>
           <Editor
+            ref={editorRef}
             onTextChange={handleTextChange}
             monacoTheme={monacoThemeMap[theme]}
             value={fileContent}
@@ -551,6 +566,17 @@ export default function App() {
         isLoading={isLoading}
         progress={progress}
       />
+
+      {/* ── Chart Generator Modal ──────────────────────────────────────────── */}
+      {showChartGenerator && (
+        <ChartGenerator
+          onClose={() => setShowChartGenerator(false)}
+          onInsert={(brf) => {
+            editorRef.current?.insertTextAtCursor(brf);
+            setShowChartGenerator(false);
+          }}
+        />
+      )}
 
       {/* ── First-visit welcome / onboarding modal ────────────────────── */}
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} />}

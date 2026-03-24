@@ -266,29 +266,35 @@ function translateTextPreservingNewlines(text: string, table: string): string {
 async function translateDocumentWithMath(text: string, textTable: string, mathCode: string): Promise<string> {
   if (!liblouis) return '';
 
-  // Regex to match block math $$...$$ and inline math \(...\)
-  // We use a unified regex for both
-  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))/gs;
+  // Regex to match block math $$...$$, inline math \(...\), and chart blocks :::chart\n...\n:::
+  // chart block is group 5, chart content is group 6
+  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
   let match;
 
-  while ((match = mathRegex.exec(text)) !== null) {
-    // Translate the text *before* the math
+  while ((match = chunkRegex.exec(text)) !== null) {
+    // Translate the text *before* the match
     const textBefore = text.slice(lastIndex, match.index);
     if (textBefore) {
       result += translateTextPreservingNewlines(textBefore, textTable);
     }
 
-    // Determine which capture group matched (block is match[2], inline is match[4])
-    const latex = match[2] !== undefined ? match[2] : match[4];
+    if (match[5] !== undefined) {
+      // It's a braille chart block. Inject the pure BRF dots untouched.
+      result += '\n' + match[6] + '\n';
+    } else {
+      // It's math
+      // Determine which capture group matched (block is match[2], inline is match[4])
+      const latex = match[2] !== undefined ? match[2] : match[4];
 
-    // Translate the math
-    const mathResult = await translateMath(latex, mathCode);
-    result += mathResult;
+      // Translate the math
+      const mathResult = await translateMath(latex, mathCode);
+      result += mathResult;
+    }
 
-    lastIndex = mathRegex.lastIndex;
+    lastIndex = chunkRegex.lastIndex;
   }
 
   // Translate any remaining text after the last math block
@@ -305,8 +311,8 @@ async function translateDocumentWithMath(text: string, textTable: string, mathCo
  * blocks in the original text, leaving the non-math text untouched.
  */
 async function convertMathOnly(text: string, mathCode: string): Promise<string> {
-  // Regex to match block math $$...$$ and inline math \(...\)
-  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))/gs;
+  // Regex to match block math $$...$$, inline math \(...\), and chart blocks :::chart\n...\n:::
+  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -316,12 +322,17 @@ async function convertMathOnly(text: string, mathCode: string): Promise<string> 
     // Keep the text *before* the math exactly as it is
     result += text.slice(lastIndex, match.index);
 
-    // Determine which capture group matched (block is match[2], inline is match[4])
-    const latex = match[2] !== undefined ? match[2] : match[4];
+    if (match[5] !== undefined) {
+      // Just pass the chart block through untouched
+      result += match[5];
+    } else {
+      // Determine which capture group matched (block is match[2], inline is match[4])
+      const latex = match[2] !== undefined ? match[2] : match[4];
 
-    // Translate the math
-    const mathResult = await translateMath(latex, mathCode);
-    result += mathResult;
+      // Translate the math
+      const mathResult = await translateMath(latex, mathCode);
+      result += mathResult;
+    }
 
     lastIndex = mathRegex.lastIndex;
   }
