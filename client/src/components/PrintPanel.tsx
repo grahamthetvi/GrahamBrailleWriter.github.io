@@ -2,7 +2,7 @@ import { useState, useEffect, type ChangeEvent } from 'react';
 import { printBrf, getPrinters } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
-import { isChromeOS, isMac, isWindows, isLinux } from '../utils/os';
+import { isMac, isWindows, isLinux } from '../utils/os';
 
 interface PrintPanelProps {
   brf: string;
@@ -88,9 +88,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
     if (selectedDriverId !== 'viewplus') return null;
 
     const style = { fontSize: '0.8rem', marginTop: '0.4rem', lineHeight: 1.3 };
-    if (isChromeOS()) {
-      return <div style={{ ...style, color: '#d97706' }}>⚠️ <strong>ChromeOS Notice:</strong> Direct WebUSB printing to ViewPlus is experimental and might not work.</div>;
-    } else if (isWindows() || isMac()) {
+    if (isWindows() || isMac()) {
       return <div style={{ ...style, color: '#0369a1' }}>ℹ️ <strong>Driver Required:</strong> Ensure you have the official ViewPlus printer driver installed for your specific embosser.</div>;
     } else if (isLinux()) {
       return <div style={{ ...style, color: '#d97706' }}>⚠️ <strong>Linux Notice:</strong> ViewPlus bridging on Linux is experimental and might not work.</div>;

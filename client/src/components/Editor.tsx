@@ -33,6 +33,10 @@ export function Editor({
   // Prevents the onDidChangeModelContent handler from firing during a
   // programmatic setValue() call, which would cause an update loop.
   const isExternalUpdate = useRef(false);
+  const onTextChangeRef = useRef(onTextChange);
+  useEffect(() => {
+    onTextChangeRef.current = onTextChange;
+  }, [onTextChange]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -59,7 +63,7 @@ export function Editor({
       // Debounce: only notify after 500ms of inactivity
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
-        onTextChange(text);
+        onTextChangeRef.current(text);
       }, 500);
     });
 

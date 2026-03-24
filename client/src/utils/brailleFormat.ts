@@ -50,6 +50,20 @@ function wrapBrailleLine(line: string, cells: number, space: string): string[] {
 }
 
 /**
+ * Converts a page number to ASCII braille notation (North American).
+ * e.g. 1 -> '#a', 10 -> '#aj'
+ */
+function toBrailleNumber(num: number): string {
+  let chars = '#';
+  const s = num.toString();
+  for (const c of s) {
+    if (c === '0') chars += 'j';
+    else chars += String.fromCharCode('a'.charCodeAt(0) + parseInt(c, 10) - 1);
+  }
+  return chars;
+}
+
+/**
  * Formats a Unicode braille string into an array of page strings for display.
  * Each page contains at most linesPerPage lines; each line is at most cellsPerRow
  * characters wide. Lines that exceed cellsPerRow are word-wrapped — whole braille
@@ -59,6 +73,7 @@ export function formatBrfPages(
   unicodeBraille: string,
   cellsPerRow: number,
   linesPerPage: number,
+  includePageNumbers: boolean = false,
 ): string[] {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
@@ -87,8 +102,20 @@ export function formatBrfPages(
   if (wrappedLines.length === 0) return [''];
 
   const pages: string[] = [];
-  for (let i = 0; i < wrappedLines.length; i += lines) {
-    pages.push(wrappedLines.slice(i, i + lines).join('\n'));
+  const contentLines = includePageNumbers ? Math.max(1, lines - 1) : lines;
+
+  for (let i = 0; i < wrappedLines.length; i += contentLines) {
+    const chunk = wrappedLines.slice(i, i + contentLines);
+    if (includePageNumbers) {
+      // Pad to standard size so page number goes to the bottom
+      while (chunk.length < contentLines) {
+        chunk.push('');
+      }
+      const pageNumStr = toBrailleNumber(Math.floor(i / contentLines) + 1);
+      const unicodePageNum = pageNumStr.split('').map(c => String.fromCharCode(c.charCodeAt(0) - 0x20 + 0x2800)).join('');
+      chunk.push(unicodePageNum.padStart(cells, BRAILLE_SPACE));
+    }
+    pages.push(chunk.join('\n'));
   }
   return pages;
 }
@@ -103,6 +130,7 @@ export function formatBrfForOutput(
   rawBrf: string,
   cellsPerRow: number,
   linesPerPage: number,
+  includePageNumbers: boolean = false,
 ): string {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
@@ -128,8 +156,19 @@ export function formatBrfForOutput(
   }
 
   const pageChunks: string[] = [];
-  for (let i = 0; i < wrapped.length; i += lines) {
-    pageChunks.push(wrapped.slice(i, i + lines).join('\r\n'));
+  const contentLines = includePageNumbers ? Math.max(1, lines - 1) : lines;
+
+  for (let i = 0; i < wrapped.length; i += contentLines) {
+    const chunk = wrapped.slice(i, i + contentLines);
+    if (includePageNumbers) {
+      // Pad to standard size so page number goes to the bottom
+      while (chunk.length < contentLines) {
+        chunk.push('');
+      }
+      const pageNumStr = toBrailleNumber(Math.floor(i / contentLines) + 1);
+      chunk.push(pageNumStr.padStart(cells, ' '));
+    }
+    pageChunks.push(chunk.join('\r\n'));
   }
 
   // Join pages with form feed; add trailing CRLF

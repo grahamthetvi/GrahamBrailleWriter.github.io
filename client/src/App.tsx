@@ -5,7 +5,7 @@ import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
-import { useBraille, type MathCode } from './hooks/useBraille';
+import { useBraille } from './hooks/useBraille';
 import { asciiToUnicodeBraille } from './utils/braille';
 import { formatBrfPages, formatBrfForOutput } from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
@@ -44,9 +44,10 @@ const themeLabels: Record<Theme, string> = {
 interface PageSettings {
   cellsPerRow: number;
   linesPerPage: number;
+  showPageNumbers?: boolean;
 }
 
-const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25 };
+const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25, showPageNumbers: false };
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(
@@ -60,7 +61,6 @@ export default function App() {
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [selectedTable, setSelectedTable] = useState(DEFAULT_TABLE);
-  const [mathCode, setMathCode] = useState<MathCode>('nemeth');
 
   // ── Perkins Viewer ───────────────────────────────────────────────────────
   const [isPerkinsMode, setIsPerkinsMode] = useState(false);
@@ -103,7 +103,7 @@ export default function App() {
   const [showPageSettings, setShowPageSettings] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
 
-  const { translate, convertMath, translatedText, isLoading, progress, error, workerReady } =
+  const { translate, translatedText, isLoading, progress, error, workerReady } =
     useBraille();
 
   // ── Track input stats for the status bar ────────────────────────────────
@@ -123,20 +123,18 @@ export default function App() {
   const handleTextChange = useCallback((text: string) => {
     setInputText(text);
     if (text.trim()) {
-      translate(text, selectedTable, mathCode);
+      translate(text, selectedTable, 'nemeth');
     }
-  }, [translate, selectedTable, mathCode]);
+  }, [translate, selectedTable]);
 
   // ── Re-translate when table changes ─────────────────────────────────────
   const prevTableRef = useRef(selectedTable);
-  const prevMathRef = useRef(mathCode);
   useEffect(() => {
-    if ((selectedTable !== prevTableRef.current || mathCode !== prevMathRef.current) && inputText.trim()) {
+    if ((selectedTable !== prevTableRef.current) && inputText.trim()) {
       prevTableRef.current = selectedTable;
-      prevMathRef.current = mathCode;
-      translate(inputText, selectedTable, mathCode);
+      translate(inputText, selectedTable, 'nemeth');
     }
-  }, [selectedTable, mathCode, inputText, translate]);
+  }, [selectedTable, inputText, translate]);
 
   // ── File upload ──────────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -152,7 +150,7 @@ export default function App() {
       const text = ev.target?.result as string;
       setInputText(text);
       setFileContent(text);
-      translate(text, selectedTable, mathCode);
+      translate(text, selectedTable, 'nemeth');
     };
     reader.readAsText(file, 'utf-8');
     // Reset input so the same file can be re-loaded if needed
@@ -166,6 +164,7 @@ export default function App() {
       translatedText,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
+      pageSettings.showPageNumbers
     );
     const blob = new Blob([formatted], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -176,23 +175,10 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  // ── Convert Math ─────────────────────────────────────────────────────────
-  async function handleConvertMath() {
-    if (!inputText.trim()) return;
-    try {
-      const result = await convertMath(inputText, mathCode);
-      setInputText(result);
-      setFileContent(result);
-      translate(result, selectedTable, mathCode);
-    } catch (err) {
-      console.error('Failed to convert math:', err);
-    }
-  }
-
   // ── Paginated braille output ─────────────────────────────────────────────
   const unicodeBraille = translatedText ? asciiToUnicodeBraille(translatedText) : '';
   const brfPages = unicodeBraille
-    ? formatBrfPages(unicodeBraille, pageSettings.cellsPerRow, pageSettings.linesPerPage)
+    ? formatBrfPages(unicodeBraille, pageSettings.cellsPerRow, pageSettings.linesPerPage, pageSettings.showPageNumbers)
     : [];
 
   // ── Page settings input handlers ─────────────────────────────────────────
@@ -247,43 +233,42 @@ export default function App() {
             ))}
           </select>
 
-          {/* Math Code selector */}
-          <label className="toolbar-label" htmlFor="math-select">
-            Math Focus
-          </label>
-          <select
-            id="math-select"
-            className="table-select"
-            value={mathCode}
-            onChange={(e) => setMathCode(e.target.value as MathCode)}
-            disabled={isPerkinsMode}
-            title="Select math braille code"
-            aria-label="Select math braille code"
-          >
-            <option value="nemeth">Nemeth</option>
-            <option value="ueb">UEB Math</option>
-          </select>
-
-          {/* Worker ready indicator */}
-          <span
-            role="status"
-            aria-live="polite"
-            aria-label={workerReady ? 'liblouis WASM ready' : 'Loading liblouis WASM'}
-            className={`worker-indicator ${workerReady ? 'ready' : 'loading'}`}
-            title={workerReady ? 'liblouis WASM ready' : 'Loading liblouis…'}
-          >
-            {workerReady ? '● Ready' : '● Loading…'}
+          {/* Math & Prompt instructions */}
+          <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>
+            UEB Math is standard and $$math$$ is Nemeth.
           </span>
-
-          {/* Scan & Convert Math */}
           <button
             className="toolbar-btn"
-            onClick={handleConvertMath}
-            disabled={!workerReady || !inputText.trim() || isPerkinsMode}
-            title="Scan text for LaTeX and substitute with braille math"
-            aria-label="Scan text for LaTeX and substitute with braille math"
+            id="ai-prompt-btn"
+            onClick={() => {
+              const promptText = "Extract raw text for the purpose of braille translation. Please reformat my text so that every mathematical expression, equation, and arithmetic operation is wrapped in LaTeX notation: \\(...\\) for inline math and $$...$$ for display equations. Leave all non-math prose unchanged.";
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(promptText);
+              } else {
+                // Fallback for non-secure contexts
+                const textArea = document.createElement("textarea");
+                textArea.value = promptText;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                  document.execCommand('copy');
+                } catch (err) {
+                  console.error('Fallback format copy failed', err);
+                }
+                document.body.removeChild(textArea);
+              }
+              const btn = document.getElementById('ai-prompt-btn');
+              if (btn) {
+                const originalText = btn.innerText;
+                btn.innerText = "Copied!";
+                setTimeout(() => { btn.innerText = originalText; }, 2000);
+              }
+            }}
+            title="Copy prompt for AI to format math"
+            aria-label="Copy prompt for AI to format math"
           >
-            Scan & Convert Math
+            Copy AI Prompt
           </button>
 
           {/* File upload — input is screen-reader-hidden; button is the control */}
@@ -457,6 +442,15 @@ export default function App() {
                       onChange={handleLinesChange}
                       aria-label="Lines per page"
                     />
+                  </label>
+                  <label className="settings-field">
+                    <input
+                      type="checkbox"
+                      checked={pageSettings.showPageNumbers || false}
+                      onChange={(e) => setPageSettings(s => ({ ...s, showPageNumbers: e.target.checked }))}
+                      aria-label="Show Page Numbers"
+                    />
+                    <span>Show Page Nums</span>
                   </label>
                   <p className="settings-hint">
                     Common: 32 × 25 (8.5x11), 40 × 25 (11x11.5)

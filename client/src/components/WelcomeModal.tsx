@@ -80,7 +80,7 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
             <div className="welcome-bridge-content">
               <h3>Seamless Embossing (WebUSB & Bridge)</h3>
               <p>
-                We now feature <strong>Native Embosser Drivers</strong> for exact formatting on Enabling Technologies, Index, and Braillo embossers!
+                We now feature <strong>Native Embosser Drivers</strong> for exact formatting on Enabling Technologies, Index, ViewPlus, and Braillo embossers!
                 <strong> ChromeOS</strong> users can leverage WebUSB to print directly—no apps required.
                 <strong> Windows/macOS/Linux</strong> users must run our lightweight <strong>Graham Bridge</strong> background app to route braille reliably to their printer.
               </p>
