@@ -9,6 +9,83 @@
  * Words longer than `cells` are hard-broken at the character limit (the only
  * case where a word is split mid-character, matching the user's requirement).
  */
+/** 1-based Braille cell index (cell 1 = leftmost). */
+export type ParagraphLineStarts = {
+  firstLineStartCell: number;
+  runoverStartCell: number;
+};
+
+function clampParagraphCell(n: number, cellsPerRow: number): number {
+  const max = Math.max(1, cellsPerRow);
+  return Math.min(max, Math.max(1, Math.floor(n)));
+}
+
+/**
+ * Word-wraps one logical line with literary paragraph margins: first physical line
+ * starts at `firstLineStartCell`, continuation lines at `runoverStartCell` (1-based).
+ * Each output line is prefix blanks + content, total width at most `cellsPerRow`.
+ */
+export function wrapBrailleLineWithParagraphStarts(
+  line: string,
+  cellsPerRow: number,
+  firstLineStartCell: number,
+  runoverStartCell: number,
+  space: string,
+): string[] {
+  const cells = Math.max(1, cellsPerRow);
+  const firstCell = clampParagraphCell(firstLineStartCell, cells);
+  const runCell = clampParagraphCell(runoverStartCell, cells);
+  const marginFirst = firstCell - 1;
+  const marginRun = runCell - 1;
+  const capFirst = Math.max(1, cells - marginFirst);
+  const capRun = Math.max(1, cells - marginRun);
+
+  const words = line.split(space);
+  const result: string[] = [];
+  let current = '';
+  let onFirstLine = true;
+
+  const margin = () => (onFirstLine ? marginFirst : marginRun);
+  const cap = () => (onFirstLine ? capFirst : capRun);
+
+  const pushCurrent = () => {
+    if (current.length === 0) return;
+    const m = margin();
+    result.push(space.repeat(m) + current);
+    current = '';
+    onFirstLine = false;
+  };
+
+  for (const word of words) {
+    if (word.length === 0) continue;
+
+    if (word.length > cap()) {
+      if (current.length > 0) pushCurrent();
+      let remaining = word;
+      while (remaining.length > 0) {
+        const c = cap();
+        const chunk = remaining.slice(0, c);
+        remaining = remaining.slice(c);
+        const m = margin();
+        result.push(space.repeat(m) + chunk);
+        onFirstLine = false;
+      }
+      continue;
+    }
+
+    const needed =
+      current.length === 0 ? word.length : current.length + space.length + word.length;
+    if (needed <= cap()) {
+      current = current.length === 0 ? word : current + space + word;
+    } else {
+      pushCurrent();
+      current = word;
+    }
+  }
+  pushCurrent();
+  return result;
+}
+
 function wrapBrailleLine(line: string, cells: number, space: string): string[] {
   const words = line.split(space);
   const result: string[] = [];
@@ -74,6 +151,7 @@ export function formatBrfPages(
   cellsPerRow: number,
   linesPerPage: number,
   includePageNumbers: boolean = false,
+  paragraphStarts?: ParagraphLineStarts,
 ): string[] {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
@@ -81,12 +159,20 @@ export function formatBrfPages(
   // In Unicode braille, ASCII space (0x20) was converted to U+2800 (blank braille pattern)
   const BRAILLE_SPACE = '\u2800';
 
+  const firstStart = paragraphStarts?.firstLineStartCell ?? 1;
+  const runStart = paragraphStarts?.runoverStartCell ?? 1;
+  const useParagraphStarts = firstStart > 1 || runStart > 1;
+
   const rawLines = unicodeBraille.split('\n');
   const wrappedLines: string[] = [];
 
   for (const line of rawLines) {
     if (line.length === 0) {
       wrappedLines.push(''); // preserve blank lines (e.g. from Enter key presses)
+    } else if (useParagraphStarts) {
+      wrappedLines.push(
+        ...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, BRAILLE_SPACE),
+      );
     } else if (line.length <= cells) {
       wrappedLines.push(line); // fits — no wrapping needed
     } else {
@@ -121,6 +207,20 @@ export function formatBrfPages(
 }
 
 /**
+ * Normalizes a BRF file read as text: CRLF → LF, form feeds → blank line (page gap).
+ */
+export function normalizeImportedBrf(raw: string): string {
+  return raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\f/g, '\n\n');
+}
+
+/** Default download name; includes time so same-day exports do not overwrite in the browser. */
+export function defaultBrfDownloadFilename(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `braille-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.brf`;
+}
+
+/**
  * Formats raw ASCII BRF for download / embosser printing.
  * Hard-wraps at cellsPerRow using word-aware wrapping, paginates with
  * form-feed characters (0x0C), and uses CRLF line endings as required
@@ -131,9 +231,14 @@ export function formatBrfForOutput(
   cellsPerRow: number,
   linesPerPage: number,
   includePageNumbers: boolean = false,
+  paragraphStarts?: ParagraphLineStarts,
 ): string {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
+
+  const firstStart = paragraphStarts?.firstLineStartCell ?? 1;
+  const runStart = paragraphStarts?.runoverStartCell ?? 1;
+  const useParagraphStarts = firstStart > 1 || runStart > 1;
 
   const rawLines = rawBrf.split('\n');
   const wrapped: string[] = [];
@@ -143,7 +248,9 @@ export function formatBrfForOutput(
       wrapped.push('');
       continue;
     }
-    if (line.length <= cells) {
+    if (useParagraphStarts) {
+      wrapped.push(...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, ' '));
+    } else if (line.length <= cells) {
       wrapped.push(line);
     } else {
       wrapped.push(...wrapBrailleLine(line, cells, ' '));

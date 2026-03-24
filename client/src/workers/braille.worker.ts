@@ -23,12 +23,15 @@
  * the UI can render a live progress bar.
  *
  * Message protocol  (main → worker):
- *   { text: string, table?: string, mathCode?: string }
+ *   { type: 'TRANSLATE', text, table?, mathCode? }
+ *   { type: 'CONVERT_MATH_ONLY', text, mathCode? }
+ *   { type: 'BACK_TRANSLATE', text: brf, table? }
  *
  * Message protocol  (worker → main):
  *   { type: 'READY' }
  *   { type: 'RESULT',   result: string }
  *   { type: 'CONVERT_MATH_RESULT', result: string }
+ *   { type: 'BACK_TRANSLATE_RESULT', plainText: string, brf: string }
  *   { type: 'PROGRESS', percent: number }   // 0–100, during chunked jobs
  *   { type: 'ERROR',    error:  string }
  */
@@ -38,6 +41,7 @@
 interface LiblouisEasyApi {
   setLiblouisBuild(capi: object): void;
   translateString(table: string, text: string): string | null;
+  backTranslateString(table: string, brf: string): string | null;
   enableOnDemandTableLoading(url: string): void;
   setLogLevel(level: number): void;
 }
@@ -167,8 +171,12 @@ async function init(): Promise<void> {
 
   // ── Step 3: wire up and configure the Easy API ───────────────────────────
   liblouis = (self as unknown as Record<string, unknown>)['liblouis'] as LiblouisEasyApi;
-  if (!liblouis || typeof liblouis.translateString !== 'function') {
-    throw new Error('easy-api.js did not expose a liblouis instance on self');
+  if (
+    !liblouis ||
+    typeof liblouis.translateString !== 'function' ||
+    typeof liblouis.backTranslateString !== 'function'
+  ) {
+    throw new Error('easy-api.js did not expose a full liblouis instance on self');
   }
 
   if (capi) liblouis.setLiblouisBuild(capi);
@@ -257,6 +265,23 @@ function translateTextPreservingNewlines(text: string, table: string): string {
     if (!cleanLine) return hasCR ? '\r' : '';
     const translated = liblouis!.translateString(table, cleanLine) || '';
     return hasCR ? translated + '\r' : translated;
+  }).join('\n');
+}
+
+/**
+ * Back-translates ASCII BRF line-by-line so newlines match the source file.
+ * Grade 2 / contractions are not guaranteed to round-trip to the original prose.
+ */
+function backTranslateTextPreservingNewlines(brf: string, table: string): string {
+  if (!brf) return '';
+  const lines = brf.split('\n');
+  return lines.map(line => {
+    if (!line) return '';
+    const hasCR = line.endsWith('\r');
+    const cleanLine = hasCR ? line.slice(0, -1) : line;
+    if (!cleanLine) return hasCR ? '\r' : '';
+    const plain = liblouis!.backTranslateString(table, cleanLine) || '';
+    return hasCR ? plain + '\r' : plain;
   }).join('\n');
 }
 
@@ -358,6 +383,24 @@ self.addEventListener('message', async (event: MessageEvent) => {
       type: 'ERROR',
       error: 'liblouis is not ready yet — wait for the READY message.',
     });
+    return;
+  }
+
+  if (type === 'BACK_TRANSLATE') {
+    const brf = text ?? '';
+    try {
+      if (!brf.trim()) {
+        self.postMessage({ type: 'BACK_TRANSLATE_RESULT', plainText: '', brf });
+      } else {
+        const plainText = backTranslateTextPreservingNewlines(brf, table);
+        self.postMessage({ type: 'BACK_TRANSLATE_RESULT', plainText, brf });
+      }
+    } catch (err) {
+      self.postMessage({
+        type: 'ERROR',
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
     return;
   }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Editor, type EditorHandle } from './components/Editor';
 import { ChartGenerator } from './components/ChartGenerator';
 import { PrintPanel } from './components/PrintPanel';
@@ -8,7 +8,12 @@ import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille } from './hooks/useBraille';
 import { asciiToUnicodeBraille } from './utils/braille';
-import { formatBrfPages, formatBrfForOutput } from './utils/brailleFormat';
+import {
+  formatBrfPages,
+  formatBrfForOutput,
+  normalizeImportedBrf,
+  defaultBrfDownloadFilename,
+} from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
@@ -53,6 +58,13 @@ interface PageSettings {
   paperFormat: PaperFormat;
   /** ViewPlus: extra blank cells per line when printing US Letter (see Layout panel). */
   viewPlusLeftPadCells: number;
+  /**
+   * Literary line starts (1-based Braille cells). Each Enter-started line is a new paragraph:
+   * first physical line begins at `paragraphFirstLineStartCell`, wrapped continuations at `paragraphRunoverStartCell`.
+   * Values are clamped to the row width. ViewPlus left padding adds the same offset to every line, preserving alignment.
+   */
+  paragraphFirstLineStartCell: number;
+  paragraphRunoverStartCell: number;
 }
 
 function inferPaperFormat(cellsPerRow: number, linesPerPage: number): PaperFormat {
@@ -67,6 +79,8 @@ const DEFAULT_PAGE_SETTINGS: PageSettings = {
   showPageNumbers: false,
   paperFormat: 'wide',
   viewPlusLeftPadCells: VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS,
+  paragraphFirstLineStartCell: 1,
+  paragraphRunoverStartCell: 1,
 };
 
 export default function App() {
@@ -121,6 +135,12 @@ export default function App() {
       if (typeof merged.viewPlusLeftPadCells !== 'number' || Number.isNaN(merged.viewPlusLeftPadCells)) {
         merged.viewPlusLeftPadCells = VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS;
       }
+      if (typeof merged.paragraphFirstLineStartCell !== 'number' || Number.isNaN(merged.paragraphFirstLineStartCell)) {
+        merged.paragraphFirstLineStartCell = DEFAULT_PAGE_SETTINGS.paragraphFirstLineStartCell;
+      }
+      if (typeof merged.paragraphRunoverStartCell !== 'number' || Number.isNaN(merged.paragraphRunoverStartCell)) {
+        merged.paragraphRunoverStartCell = DEFAULT_PAGE_SETTINGS.paragraphRunoverStartCell;
+      }
       return merged;
     } catch {
       return DEFAULT_PAGE_SETTINGS;
@@ -135,7 +155,7 @@ export default function App() {
   const [showPrint, setShowPrint] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
-  const { translate, translatedText, isLoading, progress, error, workerReady } =
+  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady } =
     useBraille();
 
   // ── Track input stats for the status bar ────────────────────────────────
@@ -170,6 +190,7 @@ export default function App() {
 
   // ── File upload ──────────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const brfInputRef = useRef<HTMLInputElement>(null);
   // Separate state that is only set on file load or math conversion; passed as `value` to Editor
   // so Monaco's content is replaced. Kept out of inputText feedback loop.
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
@@ -189,6 +210,26 @@ export default function App() {
     e.target.value = '';
   }
 
+  function handleBrfImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = typeof reader.result === 'string' ? reader.result : '';
+      const normalized = normalizeImportedBrf(raw);
+      void backTranslateBrf(normalized, selectedTable)
+        .then(({ plainText }) => {
+          setInputText(plainText);
+          setFileContent(plainText);
+        })
+        .catch((err: unknown) => {
+          console.error('[brf import]', err);
+        });
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+  }
+
   // ── BRF download ─────────────────────────────────────────────────────────
   function handleDownloadBrf() {
     if (!translatedText) return;
@@ -196,22 +237,57 @@ export default function App() {
       translatedText,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
-      pageSettings.showPageNumbers
+      pageSettings.showPageNumbers,
+      {
+        firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
+        runoverStartCell: pageSettings.paragraphRunoverStartCell,
+      },
     );
-    const blob = new Blob([formatted], { type: 'text/plain;charset=utf-8' });
+    // CRLF + form feeds (0x0C) between pages — embosser-friendly; ASCII-only payload.
+    const blob = new Blob([formatted], { type: 'text/plain;charset=us-ascii' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'output.brf';
+    a.download = defaultBrfDownloadFilename();
     a.click();
     URL.revokeObjectURL(url);
   }
 
   // ── Paginated braille output ─────────────────────────────────────────────
   const unicodeBraille = translatedText ? asciiToUnicodeBraille(translatedText) : '';
+  const paragraphStarts = useMemo(
+    () => ({
+      firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
+      runoverStartCell: pageSettings.paragraphRunoverStartCell,
+    }),
+    [pageSettings.paragraphFirstLineStartCell, pageSettings.paragraphRunoverStartCell],
+  );
   const brfPages = unicodeBraille
-    ? formatBrfPages(unicodeBraille, pageSettings.cellsPerRow, pageSettings.linesPerPage, pageSettings.showPageNumbers)
+    ? formatBrfPages(
+        unicodeBraille,
+        pageSettings.cellsPerRow,
+        pageSettings.linesPerPage,
+        pageSettings.showPageNumbers,
+        paragraphStarts,
+      )
     : [];
+
+  const formattedBrfForPrint = useMemo(() => {
+    if (!translatedText) return '';
+    return formatBrfForOutput(
+      translatedText,
+      pageSettings.cellsPerRow,
+      pageSettings.linesPerPage,
+      pageSettings.showPageNumbers,
+      paragraphStarts,
+    );
+  }, [
+    translatedText,
+    pageSettings.cellsPerRow,
+    pageSettings.linesPerPage,
+    pageSettings.showPageNumbers,
+    paragraphStarts,
+  ]);
 
   // ── Scroll Sync ──────────────────────────────────────────────────────────
   const brfContainerRef = useRef<HTMLDivElement>(null);
@@ -366,6 +442,16 @@ export default function App() {
             onChange={handleFileUpload}
             disabled={isPerkinsMode}
           />
+          <input
+            ref={brfInputRef}
+            type="file"
+            accept=".brf,.BRF,text/plain"
+            aria-hidden="true"
+            tabIndex={-1}
+            style={{ display: 'none' }}
+            onChange={handleBrfImport}
+            disabled={isPerkinsMode}
+          />
           <button
             className="toolbar-btn"
             onClick={() => fileInputRef.current?.click()}
@@ -375,13 +461,22 @@ export default function App() {
           >
             Open File
           </button>
+          <button
+            className="toolbar-btn"
+            onClick={() => brfInputRef.current?.click()}
+            disabled={isPerkinsMode || !workerReady}
+            title="Import a BRF file: back-translate to text on the left using the selected table; braille on the right shows the file contents. Grade 2 back-translation may not match the original wording."
+            aria-label="Import BRF file with back-translation"
+          >
+            Import BRF
+          </button>
 
           {/* Download BRF */}
           <button
             className="toolbar-btn toolbar-btn--primary"
             onClick={handleDownloadBrf}
             disabled={!translatedText || isPerkinsMode}
-            title="Download the translated BRF file"
+            title="Download BRF with Layout settings: cells per row, lines per page, paragraph line starts, optional page numbers, CRLF lines, form feed between pages"
             aria-label="Download translated BRF file"
           >
             Download BRF
@@ -433,7 +528,7 @@ export default function App() {
         {showPrint && (
           <div className="header-print-bar">
             <PrintPanel
-              brf={translatedText}
+              brf={formattedBrfForPrint || translatedText}
               bridgeConnected={bridgeConnected}
               useWebUSB={useWebUSB}
               compact
@@ -563,6 +658,85 @@ export default function App() {
                     />
                     <span>Show Page Nums</span>
                   </label>
+
+                  <div
+                    className="paragraph-format-block"
+                    role="group"
+                    aria-label="Paragraph line start positions"
+                  >
+                    <div className="paragraph-format-heading">Paragraph line starts (1–5)</div>
+                    <p className="settings-hint paragraph-format-note">
+                      Each new line from Enter is a paragraph: pick which <strong>cell</strong> the first line begins on and
+                      which cell <strong>runover</strong> lines use (e.g. literary <strong>3–5</strong>). ViewPlus left padding
+                      adds the same blank cells to <em>every</em> line, so these positions stay aligned on the page.
+                    </p>
+                    <div className="paragraph-matrix">
+                      <div className="paragraph-matrix-corner" aria-hidden="true" />
+                      {[1, 2, 3, 4, 5].map((run) => (
+                        <div key={`col-${run}`} className="paragraph-matrix-colhead">
+                          {run}
+                        </div>
+                      ))}
+                      {[1, 2, 3, 4, 5].map((first) => (
+                        <Fragment key={`row-${first}`}>
+                          <div className="paragraph-matrix-rowhead">First {first}</div>
+                          {[1, 2, 3, 4, 5].map((run) => {
+                            const active =
+                              pageSettings.paragraphFirstLineStartCell === first &&
+                              pageSettings.paragraphRunoverStartCell === run;
+                            return (
+                              <button
+                                key={`${first}-${run}`}
+                                type="button"
+                                className={`paragraph-matrix-cell${active ? ' paragraph-matrix-cell--active' : ''}`}
+                                aria-label={`First line cell ${first}, runover cell ${run}`}
+                                aria-pressed={active}
+                                onClick={() =>
+                                  setPageSettings((s) => ({
+                                    ...s,
+                                    paragraphFirstLineStartCell: first,
+                                    paragraphRunoverStartCell: run,
+                                  }))
+                                }
+                              >
+                                {first}-{run}
+                              </button>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </div>
+                    <div className="paragraph-format-quick">
+                      <span className="paragraph-format-quick-label">Quick:</span>
+                      <button
+                        type="button"
+                        className="toolbar-btn"
+                        onClick={() =>
+                          setPageSettings((s) => ({
+                            ...s,
+                            paragraphFirstLineStartCell: 1,
+                            paragraphRunoverStartCell: 1,
+                          }))
+                        }
+                      >
+                        1–1 (flush)
+                      </button>
+                      <button
+                        type="button"
+                        className="toolbar-btn"
+                        onClick={() =>
+                          setPageSettings((s) => ({
+                            ...s,
+                            paragraphFirstLineStartCell: 3,
+                            paragraphRunoverStartCell: 5,
+                          }))
+                        }
+                      >
+                        3–5 (literary)
+                      </button>
+                    </div>
+                  </div>
+
                   <p className="settings-hint">
                     Common: 32 × 25 (8.5×11), 40 × 25 (11×11.5)
                   </p>

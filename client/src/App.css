@@ -320,6 +320,93 @@ body {
   flex-basis: 100%;
 }
 
+.paragraph-format-block {
+  flex-basis: 100%;
+  margin-top: 0.25rem;
+}
+
+.paragraph-format-heading {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.paragraph-format-note {
+  font-style: normal;
+  line-height: 1.35;
+  margin-bottom: 0.45rem;
+}
+
+.paragraph-matrix {
+  display: grid;
+  grid-template-columns: minmax(3.2rem, auto) repeat(5, minmax(0, 1fr));
+  gap: 0.25rem;
+  align-items: center;
+  max-width: 22rem;
+  margin-bottom: 0.45rem;
+}
+
+.paragraph-matrix-corner {
+  min-height: 1.25rem;
+}
+
+.paragraph-matrix-colhead,
+.paragraph-matrix-rowhead {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.paragraph-matrix-rowhead {
+  text-align: right;
+  padding-right: 0.2rem;
+}
+
+.paragraph-matrix-cell {
+  font-size: 0.68rem;
+  padding: 0.2rem 0.15rem;
+  min-height: 1.65rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.paragraph-matrix-cell:hover {
+  border-color: var(--accent);
+}
+
+.paragraph-matrix-cell:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.paragraph-matrix-cell--active {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.paragraph-format-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.paragraph-format-quick-label {
+  margin-right: 0.15rem;
+}
+
+.paragraph-format-quick .toolbar-btn {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+}
+
 .viewplus-layout-block {
   flex-basis: 100%;
   margin-top: 0.35rem;
