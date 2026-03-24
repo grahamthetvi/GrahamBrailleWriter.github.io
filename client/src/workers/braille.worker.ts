@@ -244,11 +244,24 @@ async function translateMath(latex: string, mathCode: string): Promise<string> {
 
     // 3. Translate using Nemeth SRE Engine
     const result = sre.toSpeech(cleanXml);
-    return result || '';
+    return wrapMathBrailleForLiteraryContext(result || '', mathCode);
   } catch (err) {
     console.warn('[braille-worker] Math translation failed:', err, latex);
     return `[Math Error: ${latex}]`;
   }
+}
+
+/**
+ * UEB Nemeth passage indicators (BANA): open dots 456, 16 — close dots 456, 156.
+ * Literary text uses UEB; SRE outputs Nemeth cells only, so these mark the switch.
+ */
+const UEB_NEMETH_OPEN = '\u2838\u2821';
+const UEB_NEMETH_CLOSE = '\u2838\u2831';
+
+function wrapMathBrailleForLiteraryContext(braille: string, mathCode: string): string {
+  if (mathCode !== 'nemeth' || !braille) return braille;
+  if (braille.startsWith('[Math Error:')) return braille;
+  return UEB_NEMETH_OPEN + braille + UEB_NEMETH_CLOSE;
 }
 
 /**

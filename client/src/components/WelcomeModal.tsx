@@ -164,6 +164,18 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <footer className="welcome-footer">
+          <p className="welcome-footer-meta">
+            Open source under the{' '}
+            <a
+              href="https://github.com/grahamthetvi/GrahamBrailleWriter/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GNU General Public License v2
+            </a>
+            . Support:{' '}
+            <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a>
+          </p>
           <button
             ref={primaryBtnRef}
             className="welcome-btn-primary"

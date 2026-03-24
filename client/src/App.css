@@ -872,8 +872,32 @@ body {
   padding: 0.9rem 1.5rem;
   border-top: 1px solid var(--border);
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
   flex-shrink: 0;
+}
+
+.welcome-footer-meta {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  flex: 1 1 200px;
+}
+
+.welcome-footer-meta a {
+  color: var(--accent);
+}
+
+.welcome-footer-meta a:hover {
+  text-decoration: underline;
+}
+
+/* Footer with only an action button (e.g. Chart generator) */
+.welcome-footer:has(> button:only-child) {
+  justify-content: flex-end;
 }
 
 .welcome-btn-primary {

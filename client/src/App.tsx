@@ -28,6 +28,7 @@ import './App.css';
  *   • Worker translates in chunks for large documents, streaming PROGRESS events.
  *   • Translated BRF is paginated by page layout settings and displayed as
  *     discrete page blocks (Word-like scrolling view).
+ *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
  *   • Download button exports the formatted BRF file (CRLF + form feeds).
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
  *   • Theme toggle cycles dark → light → high-contrast, persisted to localStorage.
@@ -188,43 +189,34 @@ export default function App() {
     }
   }, [selectedTable, inputText, translate]);
 
-  // ── File upload ──────────────────────────────────────────────────────────
+  // ── File import (plain text or .brf) ─────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const brfInputRef = useRef<HTMLInputElement>(null);
   // Separate state that is only set on file load or math conversion; passed as `value` to Editor
   // so Monaco's content is replaced. Kept out of inputText feedback loop.
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      setInputText(text);
-      setFileContent(text);
-      translate(text, selectedTable, 'nemeth');
-    };
-    reader.readAsText(file, 'utf-8');
-    // Reset input so the same file can be re-loaded if needed
-    e.target.value = '';
-  }
-
-  function handleBrfImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const isBrf = file.name.toLowerCase().endsWith('.brf');
     const reader = new FileReader();
     reader.onload = () => {
       const raw = typeof reader.result === 'string' ? reader.result : '';
-      const normalized = normalizeImportedBrf(raw);
-      void backTranslateBrf(normalized, selectedTable)
-        .then(({ plainText }) => {
-          setInputText(plainText);
-          setFileContent(plainText);
-        })
-        .catch((err: unknown) => {
-          console.error('[brf import]', err);
-        });
+      if (isBrf) {
+        const normalized = normalizeImportedBrf(raw);
+        void backTranslateBrf(normalized, selectedTable)
+          .then(({ plainText }) => {
+            setInputText(plainText);
+            setFileContent(plainText);
+          })
+          .catch((err: unknown) => {
+            console.error('[brf import]', err);
+          });
+      } else {
+        setInputText(raw);
+        setFileContent(raw);
+        translate(raw, selectedTable, 'nemeth');
+      }
     };
     reader.readAsText(file, 'utf-8');
     e.target.value = '';
@@ -435,40 +427,21 @@ export default function App() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".txt,.text,.md,.rst,.adoc"
+            accept=".txt,.text,.md,.rst,.adoc,.brf,text/plain"
             aria-hidden="true"
             tabIndex={-1}
             style={{ display: 'none' }}
-            onChange={handleFileUpload}
-            disabled={isPerkinsMode}
-          />
-          <input
-            ref={brfInputRef}
-            type="file"
-            accept=".brf,.BRF,text/plain"
-            aria-hidden="true"
-            tabIndex={-1}
-            style={{ display: 'none' }}
-            onChange={handleBrfImport}
+            onChange={handleFileImport}
             disabled={isPerkinsMode}
           />
           <button
             className="toolbar-btn"
             onClick={() => fileInputRef.current?.click()}
             disabled={isPerkinsMode}
-            title="Load a text file for translation"
-            aria-label="Open text file for translation"
+            title="Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
+            aria-label="Import text or BRF file"
           >
-            Open File
-          </button>
-          <button
-            className="toolbar-btn"
-            onClick={() => brfInputRef.current?.click()}
-            disabled={isPerkinsMode || !workerReady}
-            title="Import a BRF file: back-translate to text on the left using the selected table; braille on the right shows the file contents. Grade 2 back-translation may not match the original wording."
-            aria-label="Import BRF file with back-translation"
-          >
-            Import BRF
+            Import file
           </button>
 
           {/* Download BRF */}
