@@ -38,17 +38,16 @@ export class EnablingTechnologiesEmbosser implements Embosser {
         return 64 + value;
     }
 
-    generateBytes(brf: string, attributes: EmbossingAttributeSet): Uint8Array {
+    generateBytes(brf: string, _attributes: EmbossingAttributeSet): Uint8Array {
         const encoder = new TextEncoder();
         const brfBytes = encoder.encode(brf);
 
-        // Formatting values
+        // Default formatting values (would typically come from attributes)
         const duplex = this.interpoint ? Duplex.INTERPOINT : Duplex.P1ONLY;
         const cell = CellType.NLS;
-        const cellsPerLine = attributes.cellsPerRow ?? this.maxCellsPerLine;
-        const lines = attributes.linesPerPage ?? 25;
-        const pageLengthInches = Math.max(11, Math.ceil(lines / 2.5));
-        const totalLines = lines;
+        const cellsPerLine = this.maxCellsPerLine;
+        const pageLengthInches = 11;
+        const totalLines = 25;
 
         // Build the ET Header
         const ESC = 0x1b;

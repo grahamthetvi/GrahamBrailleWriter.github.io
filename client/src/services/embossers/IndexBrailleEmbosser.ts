@@ -32,9 +32,9 @@ export class IndexBrailleEmbosser implements Embosser {
         const copies = attributes.copies || 1;
         const duplexMode = IndexDuplex.INTERPOINT;
         const bindingMargin = 0;
-        const cellsPerLine = attributes.cellsPerRow ?? this.maxCellsPerLine;
+        const cellsPerLine = this.maxCellsPerLine;
         const topMargin = 0;
-        const linesPerPage = attributes.linesPerPage ?? 25;
+        const linesPerPage = 25;
 
         // Index Braille Escape Sequence Header
         const ESC = '\x1B';

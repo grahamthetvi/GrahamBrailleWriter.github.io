@@ -46,10 +46,9 @@ interface PageSettings {
   cellsPerRow: number;
   linesPerPage: number;
   showPageNumbers?: boolean;
-  leftMargin?: number;
 }
 
-const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25, showPageNumbers: false, leftMargin: 0 };
+const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25, showPageNumbers: false };
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(
@@ -168,8 +167,7 @@ export default function App() {
       translatedText,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
-      pageSettings.showPageNumbers,
-      pageSettings.leftMargin
+      pageSettings.showPageNumbers
     );
     const blob = new Blob([formatted], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -183,7 +181,7 @@ export default function App() {
   // ── Paginated braille output ─────────────────────────────────────────────
   const unicodeBraille = translatedText ? asciiToUnicodeBraille(translatedText) : '';
   const brfPages = unicodeBraille
-    ? formatBrfPages(unicodeBraille, pageSettings.cellsPerRow, pageSettings.linesPerPage, pageSettings.showPageNumbers, pageSettings.leftMargin)
+    ? formatBrfPages(unicodeBraille, pageSettings.cellsPerRow, pageSettings.linesPerPage, pageSettings.showPageNumbers)
     : [];
 
   // ── Scroll Sync ──────────────────────────────────────────────────────────
@@ -390,7 +388,7 @@ export default function App() {
         {/* Compact print bar — full-width row below the toolbar */}
         {showPrint && (
           <div className="header-print-bar">
-            <PrintPanel brf={translatedText} pageSettings={pageSettings} bridgeConnected={bridgeConnected} useWebUSB={useWebUSB} compact />
+            <PrintPanel brf={translatedText} bridgeConnected={bridgeConnected} useWebUSB={useWebUSB} compact />
           </div>
         )}
       </header>
@@ -496,22 +494,6 @@ export default function App() {
                       aria-label="Show Page Numbers"
                     />
                     <span>Show Page Nums</span>
-                  </label>
-                  <label className="settings-field">
-                    <span>Left Margin</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={20}
-                      value={pageSettings.leftMargin || 0}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value, 10);
-                        if (!isNaN(v) && v >= 0 && v <= 20) {
-                          setPageSettings(s => ({ ...s, leftMargin: v }));
-                        }
-                      }}
-                      aria-label="Left margin in cells"
-                    />
                   </label>
                   <p className="settings-hint">
                     Common: 32 × 25 (8.5x11), 40 × 25 (11x11.5)
