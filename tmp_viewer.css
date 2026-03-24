@@ -236,36 +236,29 @@
 }
 
 .perkins-visual-cell {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 6px 12px;
   background: rgba(0,0,0,0.05);
-  padding: 8px 16px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
   border: 1px solid rgba(0,0,0,0.1);
 }
 
 .visual-dot {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: transparent;
   border: 2px solid #ccc;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.5rem;
   color: #aaa;
   font-weight: bold;
   transition: all 0.2s;
-}
-
-.visual-dot.space-dot {
-  width: 36px;
-  border-radius: 10px;
-  font-size: 0.6rem;
 }
 
 .visual-dot.active {

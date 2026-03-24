@@ -55,13 +55,14 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
                         <div className="perkins-paper-char">
                             {isSpace ? '[Space]' : currentChar}
                         </div>
-                        {/* Visual Braille Cell Reference */}
-                        <div className="perkins-visual-cell" aria-hidden="true">
-                            <div className={`visual-dot ${dots[0] ? 'active' : ''}`}>1</div>
-                            <div className={`visual-dot ${dots[3] ? 'active' : ''}`}>4</div>
-                            <div className={`visual-dot ${dots[1] ? 'active' : ''}`}>2</div>
-                            <div className={`visual-dot ${dots[4] ? 'active' : ''}`}>5</div>
+                        {/* Visual Braille Cell Reference - Perkins Input Order */}
+                        <div className="perkins-visual-cell perkins-visual-input" aria-hidden="true">
                             <div className={`visual-dot ${dots[2] ? 'active' : ''}`}>3</div>
+                            <div className={`visual-dot ${dots[1] ? 'active' : ''}`}>2</div>
+                            <div className={`visual-dot ${dots[0] ? 'active' : ''}`}>1</div>
+                            <div className={`visual-dot space-dot ${isSpace ? 'active' : ''}`}>SPC</div>
+                            <div className={`visual-dot ${dots[3] ? 'active' : ''}`}>4</div>
+                            <div className={`visual-dot ${dots[4] ? 'active' : ''}`}>5</div>
                             <div className={`visual-dot ${dots[5] ? 'active' : ''}`}>6</div>
                         </div>
                     </div>
