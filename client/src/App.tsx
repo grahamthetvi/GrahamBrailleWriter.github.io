@@ -388,7 +388,7 @@ export default function App() {
         {/* Compact print bar — full-width row below the toolbar */}
         {showPrint && (
           <div className="header-print-bar">
-            <PrintPanel brf={translatedText} bridgeConnected={bridgeConnected} useWebUSB={useWebUSB} compact />
+            <PrintPanel brf={translatedText} pageSettings={pageSettings} bridgeConnected={bridgeConnected} useWebUSB={useWebUSB} compact />
           </div>
         )}
       </header>

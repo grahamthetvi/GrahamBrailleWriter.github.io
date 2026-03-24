@@ -10,6 +10,7 @@ interface PrintPanelProps {
   useWebUSB?: boolean;
   /** Renders as a compact horizontal bar for use inside the app header. */
   compact?: boolean;
+  pageSettings?: { cellsPerRow: number; linesPerPage: number; showPageNumbers?: boolean };
 }
 
 /**
@@ -17,7 +18,7 @@ interface PrintPanelProps {
  * Sends the translated BRF content to the local bridge binary.
  * When `compact` is true, renders horizontally for use inside the header toolbar.
  */
-export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPanelProps) {
+export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact, pageSettings }: PrintPanelProps) {
   const [printerName, setPrinterName] = useState('');
   const [selectedDriverId, setSelectedDriverId] = useState('generic');
   const [status, setStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
@@ -70,7 +71,13 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
     setErrorMsg('');
     try {
       const embosser = EmbosserFactory.getEmbosser(selectedDriverId);
-      const bytes = embosser.generateBytes(brf, { copies: 1 });
+      const formattingSettings = pageSettings || { cellsPerRow: 40, linesPerPage: 25, showPageNumbers: false };
+      const bytes = embosser.generateBytes(brf, { 
+        copies: 1,
+        cellsPerRow: formattingSettings.cellsPerRow,
+        linesPerPage: formattingSettings.linesPerPage,
+        showPageNumbers: formattingSettings.showPageNumbers
+      });
 
       if (useWebUSB) {
         await printBrfWebUSB(bytes);

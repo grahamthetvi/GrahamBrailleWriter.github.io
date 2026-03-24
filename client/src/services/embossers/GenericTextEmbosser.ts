@@ -1,4 +1,5 @@
 import type { Embosser, EmbossingAttributeSet, Rectangle } from './Embosser';
+import { formatBrfForOutput } from '../../utils/brailleFormat';
 
 export class GenericTextEmbosser implements Embosser {
     private id: string;
@@ -20,33 +21,15 @@ export class GenericTextEmbosser implements Embosser {
     supportsInterpoint(): boolean { return false; }
 
     /**
-     * For generic text embossers, the biggest issue is ensuring the text is formatted 
-     * exactly with proper line breaks (`\r\n`) and page breaks (`\f` or Form Feed).
-     * Often, if a document "only prints one line", it's missing CR/LF line terminators.
+     * Formats the raw BRF using the user's selected page dimensions to ensure
+     * correct line wrapping and form feeds (\f) for basic printers like ViewPlus.
      */
-    generateBytes(brf: string, _attributes: EmbossingAttributeSet): Uint8Array {
-        // 1. Ensure all lines end with \r\n (Carriage Return + Line Feed)
-        const lines = brf.split(/\r?\n/);
-
-        // Default page settings
-        const linesPerPage = 25;
-
-        let formattedBrf = '';
-
-        for (let i = 0; i < lines.length; i++) {
-            formattedBrf += lines[i] + '\r\n'; // CR LF is required by most basic printers
-
-            // Page Break Injection (Form Feed)
-            if ((i + 1) % linesPerPage === 0) {
-                formattedBrf += '\f'; // \x0C Form Feed character to start a new page
-            }
-        }
-
-        // Final page break to ensure printer ejects the last page
-        if (!formattedBrf.endsWith('\f')) {
-            formattedBrf += '\f';
-        }
-
+    generateBytes(brf: string, attributes: EmbossingAttributeSet): Uint8Array {
+        const cells = attributes.cellsPerRow ?? 40;
+        const lines = attributes.linesPerPage ?? 25;
+        const showNumbers = attributes.showPageNumbers ?? false;
+        
+        const formattedBrf = formatBrfForOutput(brf, cells, lines, showNumbers);
         const encoder = new TextEncoder();
         return encoder.encode(formattedBrf);
     }

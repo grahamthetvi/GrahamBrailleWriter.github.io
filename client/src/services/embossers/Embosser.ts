@@ -5,7 +5,9 @@ export interface Rectangle {
 
 export interface EmbossingAttributeSet {
     copies?: number;
-    // Options we extract from BrailleBlaster settings
+    cellsPerRow?: number;
+    linesPerPage?: number;
+    showPageNumbers?: boolean;
 }
 
 export interface Embosser {

@@ -61,6 +61,10 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
         </header>
         
         <div className="welcome-body" style={{ padding: '20px' }}>
+          <p style={{ marginTop: 0, marginBottom: '15px', fontSize: '0.9rem', color: 'var(--text-color)', opacity: 0.8 }}>
+            <strong>Note:</strong> This charting feature is experimental and may not always work as intended. Charts are algorithmically mapped to 6-dot braille cells, which provides very low resolution.
+          </p>
+
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
               Chart Type

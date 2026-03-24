@@ -29,10 +29,11 @@ export class BrailloEmbosser implements Embosser {
         const zfolding = 0; // Defaulting to no Z-Folding
 
         // Braillo expects sheet length in half-inches
-        const sheetLengthInches = 11.0;
+        const lines = attributes.linesPerPage ?? 25;
+        const sheetLengthInches = Math.max(11.0, lines / 2.5);
         const sheetLengthValue = Math.ceil(sheetLengthInches * 2);
 
-        const cellsPerLine = 40;
+        const cellsPerLine = attributes.cellsPerRow ?? 40;
 
         // Format: \u001bS1\u001bJ0\u001bN0\u001bR0\u001bA[length]\u001bB[cells]\u001bC[interpoint]\u001bH[zfold]
         const ASC_ESC = '\x1B';
