@@ -755,6 +755,14 @@ body {
   color: var(--text-primary);
 }
 
+.welcome-section a {
+  color: var(--accent);
+}
+
+.welcome-section a:hover {
+  text-decoration: underline;
+}
+
 .welcome-section code {
   font-family: 'Courier New', Consolas, monospace;
   font-size: 0.78rem;

@@ -7,7 +7,7 @@ interface WelcomeModalProps {
 /**
  * First-visit onboarding modal.
  * Shown once, dismissed state saved to localStorage ('graham-braille-welcome-seen').
- * Covers: page layout settings, Bridge app, and Math/LaTeX translation.
+ * Covers: page layout (presets, ViewPlus padding), Bridge app, and Math/LaTeX.
  */
 export function WelcomeModal({ onClose }: WelcomeModalProps) {
   const primaryBtnRef = useRef<HTMLButtonElement>(null);
@@ -60,16 +60,27 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
           <section className="welcome-section">
             <div className="welcome-section-icon" aria-hidden="true">⚙</div>
             <div>
-              <h3>Page Layout — Cells &amp; Lines</h3>
+              <h3>Page Layout — Presets, Cells &amp; Lines</h3>
               <p>
-                Click the <strong>⚙ Layout</strong> button in the BRF Preview pane to
-                set the dimensions of every page. <strong>Cells / row</strong> is the
-                line width (10–100 cells); most embossers use <strong>40</strong> for
-                US Letter or <strong>32</strong> for A4. <strong>Lines / page</strong>{' '}
-                sets how many braille lines fit on one side (5–50); commonly{' '}
-                <strong>25</strong> for letter or <strong>28</strong> for A4. These
-                settings control both the on-screen preview and the downloaded{' '}
-                <code>.brf</code> file, and are remembered between visits.
+                Click <strong>⚙ Layout</strong> in the BRF Preview pane to open page
+                settings. Use quick presets: <strong>8.5×11in</strong> (US Letter,{' '}
+                <strong>32 × 25</strong> cells) or <strong>11×11.5in</strong> (wide
+                tractor paper, <strong>40 × 25</strong>), or choose <strong>Custom</strong>{' '}
+                and set <strong>Cells / row</strong> (10–100) and{' '}
+                <strong>Lines / page</strong> (5–50) yourself—for example{' '}
+                <strong>28</strong> lines for A4-style pages. These values drive the
+                on-screen preview, the downloaded <code>.brf</code>, and are saved for
+                your next visit.
+              </p>
+              <p>
+                <strong>ViewPlus embossers:</strong> Under Layout you can tune{' '}
+                <strong>left padding</strong> (extra blank cells per line) for US Letter.
+                Padding is applied when printing only if your layout is US Letter
+                (8.5×11 preset or 32 × 25). Single-sheet alignment varies by model; if you
+                dial in a value that works for your paper and want to share it, email{' '}
+                <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a>.
+                When you use <strong>🖨 Print</strong> with a ViewPlus driver, a short
+                reminder appears there too.
               </p>
             </div>
           </section>
@@ -78,11 +89,11 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
           <section className="welcome-section">
             <div className="welcome-section-icon" aria-hidden="true">🖨</div>
             <div className="welcome-bridge-content">
-              <h3>Seamless Embossing (WebUSB & Bridge)</h3>
+              <h3>Seamless Embossing (WebUSB &amp; Bridge)</h3>
               <p>
-                We now feature <strong>Native Embosser Drivers</strong> for exact formatting on Enabling Technologies, Index, ViewPlus, and Braillo embossers!
-                <strong> ChromeOS</strong> users can leverage WebUSB to print directly—no apps required.
-                <strong> Windows/macOS/Linux</strong> users must run our lightweight <strong>Graham Bridge</strong> background app to route braille reliably to their printer.
+                The app includes <strong>embosser drivers</strong> for Enabling Technologies, Index, ViewPlus, Braillo, and others—pick the model that matches your device when you print.
+                <strong> ChromeOS</strong> users can use WebUSB to send braille directly from the browser.
+                <strong> Windows/macOS/Linux</strong> users run the small <strong>Graham Bridge</strong> app so print jobs reach the embosser reliably. ViewPlus left-margin tuning stays under <strong>⚙ Layout</strong> (see above).
               </p>
 
               <div className="install-grid">
