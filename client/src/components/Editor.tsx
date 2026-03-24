@@ -13,6 +13,10 @@ interface EditorProps {
   value?: string;
   /** Number of characters at which text wraps; also draws a column ruler. */
   cellsPerRow?: number;
+  /** Callback fired when the editor is scrolled by the user, passing the percentage [0, 1] */
+  onScrollPercentageChange?: (percentage: number) => void;
+  /** Externally controlled scroll percentage, [0, 1] */
+  scrollPercentage?: number;
 }
 
 /**
@@ -26,6 +30,8 @@ export function Editor({
   monacoTheme = 'vs-dark',
   value,
   cellsPerRow = 40,
+  onScrollPercentageChange,
+  scrollPercentage,
 }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -54,6 +60,22 @@ export function Editor({
       lineNumbers: 'on',
       scrollBeyondLastLine: false,
       automaticLayout: true,
+    });
+
+    editorRef.current.onDidScrollChange((e) => {
+      const editor = editorRef.current;
+      if (!editor || !onScrollPercentageChange) return;
+      
+      const scrollHeight = editor.getContentHeight();
+      const clientHeight = editor.getLayoutInfo().height;
+      const maxScroll = Math.max(0, scrollHeight - clientHeight);
+      
+      if (maxScroll > 0) {
+        const clampedTop = Math.max(0, Math.min(e.scrollTop, maxScroll));
+        onScrollPercentageChange(clampedTop / maxScroll);
+      } else {
+        onScrollPercentageChange(0);
+      }
     });
 
     editorRef.current.onDidChangeModelContent(() => {
@@ -95,6 +117,23 @@ export function Editor({
       rulers: [cellsPerRow],
     });
   }, [cellsPerRow]);
+
+  // Push externally controlled scroll position into the editor
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || scrollPercentage === undefined) return;
+    
+    const scrollHeight = editor.getContentHeight();
+    const clientHeight = editor.getLayoutInfo().height;
+    const maxScroll = Math.max(0, scrollHeight - clientHeight);
+    
+    if (maxScroll > 0) {
+      const targetTop = scrollPercentage * maxScroll;
+      if (Math.abs(editor.getScrollTop() - targetTop) > 1) {
+        editor.setScrollTop(targetTop);
+      }
+    }
+  }, [scrollPercentage]);
 
   return (
     <div

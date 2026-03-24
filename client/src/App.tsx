@@ -181,6 +181,32 @@ export default function App() {
     ? formatBrfPages(unicodeBraille, pageSettings.cellsPerRow, pageSettings.linesPerPage, pageSettings.showPageNumbers)
     : [];
 
+  // ── Scroll Sync ──────────────────────────────────────────────────────────
+  const brfContainerRef = useRef<HTMLDivElement>(null);
+  const [editorScrollPercentage, setEditorScrollPercentage] = useState<number | undefined>(undefined);
+
+  const handleEditorScroll = useCallback((percentage: number) => {
+    const container = brfContainerRef.current;
+    if (!container) return;
+    
+    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+    if (maxScroll > 0) {
+      const targetScrollTop = percentage * maxScroll;
+      if (Math.abs(container.scrollTop - targetScrollTop) > 1) {
+        container.scrollTop = targetScrollTop;
+      }
+    }
+  }, []);
+
+  const handleBrfScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+    if (maxScroll > 0) {
+      const percentage = Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll;
+      setEditorScrollPercentage(percentage);
+    }
+  }, []);
+
   // ── Page settings input handlers ─────────────────────────────────────────
   function handleCellsChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = parseInt(e.target.value, 10);
@@ -363,6 +389,8 @@ export default function App() {
             monacoTheme={monacoThemeMap[theme]}
             value={fileContent}
             cellsPerRow={pageSettings.cellsPerRow}
+            onScrollPercentageChange={handleEditorScroll}
+            scrollPercentage={editorScrollPercentage}
           />
         </section>
 
@@ -481,7 +509,12 @@ export default function App() {
 
               {/* Paginated Word-like braille output */}
               {brfPages.length > 0 ? (
-                <div className="brf-pages-container" aria-label="Braille pages">
+                <div 
+                  className="brf-pages-container" 
+                  aria-label="Braille pages"
+                  ref={brfContainerRef}
+                  onScroll={handleBrfScroll}
+                >
                   {brfPages.map((pageContent, i) => (
                     <div
                       key={i}
