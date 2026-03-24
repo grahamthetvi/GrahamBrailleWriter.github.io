@@ -11,6 +11,7 @@ import { asciiToUnicodeBraille } from './utils/braille';
 import { formatBrfPages, formatBrfForOutput } from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
+import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import './App.css';
 
 /**
@@ -25,7 +26,7 @@ import './App.css';
  *   • Download button exports the formatted BRF file (CRLF + form feeds).
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
  *   • Theme toggle cycles dark → light → high-contrast, persisted to localStorage.
- *   • Page layout settings (cells per row, lines per page) persist to localStorage.
+ *   • Page layout settings (cells, lines, paper format, ViewPlus padding) persist to localStorage.
  */
 
 type Theme = 'dark' | 'light' | 'high-contrast';
@@ -42,13 +43,31 @@ const themeLabels: Record<Theme, string> = {
   'high-contrast': 'Dark',
 };
 
+type PaperFormat = 'us-letter' | 'wide' | 'custom';
+
 interface PageSettings {
   cellsPerRow: number;
   linesPerPage: number;
   showPageNumbers?: boolean;
+  /** Drives ViewPlus left-padding: only applied when `us-letter` (8.5×11 layout preset). */
+  paperFormat: PaperFormat;
+  /** ViewPlus: extra blank cells per line when printing US Letter (see Layout panel). */
+  viewPlusLeftPadCells: number;
 }
 
-const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25, showPageNumbers: false };
+function inferPaperFormat(cellsPerRow: number, linesPerPage: number): PaperFormat {
+  if (cellsPerRow === 32 && linesPerPage === 25) return 'us-letter';
+  if (cellsPerRow === 40 && linesPerPage === 25) return 'wide';
+  return 'custom';
+}
+
+const DEFAULT_PAGE_SETTINGS: PageSettings = {
+  cellsPerRow: 40,
+  linesPerPage: 25,
+  showPageNumbers: false,
+  paperFormat: 'wide',
+  viewPlusLeftPadCells: VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS,
+};
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(
@@ -93,7 +112,16 @@ export default function App() {
   const [pageSettings, setPageSettings] = useState<PageSettings>(() => {
     try {
       const s = localStorage.getItem('graham-braille-page-settings');
-      return s ? (JSON.parse(s) as PageSettings) : DEFAULT_PAGE_SETTINGS;
+      if (!s) return DEFAULT_PAGE_SETTINGS;
+      const parsed = JSON.parse(s) as Partial<PageSettings>;
+      const merged: PageSettings = { ...DEFAULT_PAGE_SETTINGS, ...parsed };
+      if (!parsed.paperFormat) {
+        merged.paperFormat = inferPaperFormat(merged.cellsPerRow, merged.linesPerPage);
+      }
+      if (typeof merged.viewPlusLeftPadCells !== 'number' || Number.isNaN(merged.viewPlusLeftPadCells)) {
+        merged.viewPlusLeftPadCells = VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS;
+      }
+      return merged;
     } catch {
       return DEFAULT_PAGE_SETTINGS;
     }
@@ -105,6 +133,7 @@ export default function App() {
 
   const [showPageSettings, setShowPageSettings] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
+  const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
   const { translate, translatedText, isLoading, progress, error, workerReady } =
     useBraille();
@@ -214,14 +243,29 @@ export default function App() {
   function handleCellsChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = parseInt(e.target.value, 10);
     if (!isNaN(v) && v >= 10 && v <= 100) {
-      setPageSettings(s => ({ ...s, cellsPerRow: v }));
+      setPageSettings(s => ({
+        ...s,
+        cellsPerRow: v,
+        paperFormat: inferPaperFormat(v, s.linesPerPage),
+      }));
     }
   }
 
   function handleLinesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = parseInt(e.target.value, 10);
     if (!isNaN(v) && v >= 5 && v <= 50) {
-      setPageSettings(s => ({ ...s, linesPerPage: v }));
+      setPageSettings(s => ({
+        ...s,
+        linesPerPage: v,
+        paperFormat: inferPaperFormat(s.cellsPerRow, v),
+      }));
+    }
+  }
+
+  function handleViewPlusPadChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = parseInt(e.target.value, 10);
+    if (!isNaN(v) && v >= 0 && v <= 80) {
+      setPageSettings(s => ({ ...s, viewPlusLeftPadCells: v }));
     }
   }
 
@@ -388,7 +432,14 @@ export default function App() {
         {/* Compact print bar — full-width row below the toolbar */}
         {showPrint && (
           <div className="header-print-bar">
-            <PrintPanel brf={translatedText} bridgeConnected={bridgeConnected} useWebUSB={useWebUSB} compact />
+            <PrintPanel
+              brf={translatedText}
+              bridgeConnected={bridgeConnected}
+              useWebUSB={useWebUSB}
+              compact
+              viewPlusLeftPadCells={pageSettings.viewPlusLeftPadCells}
+              viewPlusPaddingApplies={pageSettings.paperFormat === 'us-letter'}
+            />
           </div>
         )}
       </header>
@@ -443,23 +494,40 @@ export default function App() {
                 <div id="page-settings-panel" className="page-settings-panel">
                   <div className="layout-presets" style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                     <button
-                      className={`toolbar-btn ${pageSettings.cellsPerRow === 32 && pageSettings.linesPerPage === 25 ? 'toolbar-btn--active' : ''}`}
-                      onClick={() => setPageSettings({ cellsPerRow: 32, linesPerPage: 25 })}
-                      title="Standard 8.5x11 inch paper"
+                      type="button"
+                      className={`toolbar-btn ${pageSettings.paperFormat === 'us-letter' ? 'toolbar-btn--active' : ''}`}
+                      onClick={() =>
+                        setPageSettings(s => ({
+                          ...s,
+                          cellsPerRow: 32,
+                          linesPerPage: 25,
+                          paperFormat: 'us-letter',
+                        }))
+                      }
+                      title="Standard 8.5×11 inch paper (US Letter)"
                     >
-                      8.5x11in
+                      8.5×11in
                     </button>
                     <button
-                      className={`toolbar-btn ${pageSettings.cellsPerRow === 40 && pageSettings.linesPerPage === 25 ? 'toolbar-btn--active' : ''}`}
-                      onClick={() => setPageSettings({ cellsPerRow: 40, linesPerPage: 25 })}
-                      title="Wide 11x11.5 inch tractor feed paper"
+                      type="button"
+                      className={`toolbar-btn ${pageSettings.paperFormat === 'wide' ? 'toolbar-btn--active' : ''}`}
+                      onClick={() =>
+                        setPageSettings(s => ({
+                          ...s,
+                          cellsPerRow: 40,
+                          linesPerPage: 25,
+                          paperFormat: 'wide',
+                        }))
+                      }
+                      title="Wide 11×11.5 inch tractor feed paper"
                     >
-                      11x11.5in
+                      11×11.5in
                     </button>
                     <button
-                      className={`toolbar-btn ${!(pageSettings.cellsPerRow === 32 && pageSettings.linesPerPage === 25) && !(pageSettings.cellsPerRow === 40 && pageSettings.linesPerPage === 25) ? 'toolbar-btn--active' : ''}`}
+                      type="button"
+                      className={`toolbar-btn ${pageSettings.paperFormat === 'custom' ? 'toolbar-btn--active' : ''}`}
                       style={{ cursor: 'default' }}
-                      title="Custom dimensions"
+                      title="Custom dimensions (set cells and lines below)"
                     >
                       Custom
                     </button>
@@ -496,8 +564,71 @@ export default function App() {
                     <span>Show Page Nums</span>
                   </label>
                   <p className="settings-hint">
-                    Common: 32 × 25 (8.5x11), 40 × 25 (11x11.5)
+                    Common: 32 × 25 (8.5×11), 40 × 25 (11×11.5)
                   </p>
+
+                  <div className="viewplus-layout-block" role="group" aria-label="ViewPlus embosser padding">
+                    <div className="viewplus-layout-heading">ViewPlus embossing</div>
+                    <p className="viewplus-layout-note">
+                      Some ViewPlus models (e.g. Max, Rogue, Premier) feed single sheets from the right edge; the driver’s
+                      printable origin may not line up with US Letter the same way on every unit. We can add optional{' '}
+                      <strong>left padding</strong> (blank cells) on each line when you print <strong>US Letter (8.5×11)</strong>{' '}
+                      from this app. If you need a different value for your paper or embosser, adjust the number below. If you
+                      find a setting that works well for your setup and want to share it, email{' '}
+                      <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a>.
+                    </p>
+                    <label className="settings-field">
+                      <span>ViewPlus left padding (cells)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={80}
+                        value={pageSettings.viewPlusLeftPadCells}
+                        onChange={handleViewPlusPadChange}
+                        aria-label="ViewPlus left padding in braille cells"
+                      />
+                    </label>
+                    <p className="settings-hint viewplus-padding-hint">
+                      {pageSettings.paperFormat === 'us-letter' ? (
+                        <>
+                          Padding is <strong>applied</strong> to ViewPlus print jobs while this layout is US Letter (8.5×11).
+                        </>
+                      ) : (
+                        <>
+                          Padding is <strong>not applied</strong> until you choose <strong>8.5×11in</strong> above (or 32 × 25
+                          matching US Letter). Your value is saved for when you switch.
+                        </>
+                      )}
+                    </p>
+                    <label className="settings-field">
+                      <span>Quick preset</span>
+                      <select
+                        key={viewPlusPresetKey}
+                        className="viewplus-preset-select"
+                        aria-label="ViewPlus padding preset"
+                        defaultValue=""
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === 'max') {
+                            setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.max }));
+                          } else if (v === 'rogue') {
+                            setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.rogue }));
+                          } else if (v === 'premier') {
+                            setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.premier }));
+                          } else if (v === 'none') {
+                            setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.none }));
+                          }
+                          if (v) setViewPlusPresetKey(k => k + 1);
+                        }}
+                      >
+                        <option value="">Apply model preset…</option>
+                        <option value="none">None (0)</option>
+                        <option value="max">ViewPlus Max (15)</option>
+                        <option value="rogue">ViewPlus Rogue (0)</option>
+                        <option value="premier">ViewPlus Premier (0)</option>
+                      </select>
+                    </label>
+                  </div>
                 </div>
               )}
 

@@ -6,6 +6,8 @@ export interface Rectangle {
 export interface EmbossingAttributeSet {
     copies?: number;
     // Options we extract from BrailleBlaster settings
+    /** ViewPlus: blank cells prefixed to each line (single-sheet / left alignment). */
+    viewPlusLeftPadCells?: number;
 }
 
 export interface Embosser {

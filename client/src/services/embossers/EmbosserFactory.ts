@@ -1,5 +1,6 @@
 import type { Embosser } from './Embosser';
 import { GenericTextEmbosser } from './GenericTextEmbosser';
+import { ViewPlusEmbosser } from './ViewPlusEmbosser';
 import { EnablingTechnologiesEmbosser } from './EnablingTechnologiesEmbosser';
 import { IndexBrailleEmbosser } from './IndexBrailleEmbosser';
 import { BrailloEmbosser } from './BrailloEmbosser';
@@ -43,8 +44,8 @@ export const EMBOSSER_LIST: EmbosserDefinition[] = [
     },
     {
         id: 'viewplus',
-        name: 'ViewPlus (via Bridge / Generic)',
-        creator: () => new GenericTextEmbosser('viewplus', 'ViewPlus')
+        name: 'ViewPlus (Rogue / Max / Premier)',
+        creator: () => new ViewPlusEmbosser()
     }
 ];
 

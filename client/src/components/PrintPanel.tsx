@@ -4,12 +4,18 @@ import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 import { isMac, isWindows, isLinux } from '../utils/os';
 
+const VIEWPLUS_SUPPORT_EMAIL = 'grahamthetvi@icloud.com';
+
 interface PrintPanelProps {
   brf: string;
   bridgeConnected: boolean;
   useWebUSB?: boolean;
   /** Renders as a compact horizontal bar for use inside the app header. */
   compact?: boolean;
+  /** From Layout: stored ViewPlus left padding (cells). */
+  viewPlusLeftPadCells?: number;
+  /** From Layout: true only when paper format is US Letter 8.5×11. */
+  viewPlusPaddingApplies?: boolean;
 }
 
 /**
@@ -17,7 +23,14 @@ interface PrintPanelProps {
  * Sends the translated BRF content to the local bridge binary.
  * When `compact` is true, renders horizontally for use inside the header toolbar.
  */
-export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPanelProps) {
+export function PrintPanel({
+  brf,
+  bridgeConnected,
+  useWebUSB,
+  compact,
+  viewPlusLeftPadCells = 0,
+  viewPlusPaddingApplies = false,
+}: PrintPanelProps) {
   const [printerName, setPrinterName] = useState('');
   const [selectedDriverId, setSelectedDriverId] = useState('generic');
   const [status, setStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
@@ -70,7 +83,12 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
     setErrorMsg('');
     try {
       const embosser = EmbosserFactory.getEmbosser(selectedDriverId);
-      const bytes = embosser.generateBytes(brf, { copies: 1 });
+      const effectiveViewPlusPad =
+        selectedDriverId === 'viewplus' && viewPlusPaddingApplies ? viewPlusLeftPadCells : 0;
+      const bytes = embosser.generateBytes(brf, {
+        copies: 1,
+        ...(selectedDriverId === 'viewplus' ? { viewPlusLeftPadCells: effectiveViewPlusPad } : {}),
+      });
 
       if (useWebUSB) {
         await printBrfWebUSB(bytes);
@@ -84,16 +102,38 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
     }
   }
 
-  const renderViewPlusWarning = () => {
+  const renderViewPlusNotice = () => {
     if (selectedDriverId !== 'viewplus') return null;
 
-    const style = { fontSize: '0.8rem', marginTop: '0.4rem', lineHeight: 1.3 };
-    if (isWindows() || isMac()) {
-      return <div style={{ ...style, color: '#0369a1' }}>ℹ️ <strong>Driver Required:</strong> Ensure you have the official ViewPlus printer driver installed for your specific embosser.</div>;
-    } else if (isLinux()) {
-      return <div style={{ ...style, color: '#d97706' }}>⚠️ <strong>Linux Notice:</strong> ViewPlus bridging on Linux is experimental and might not work.</div>;
-    }
-    return null;
+    const style = { fontSize: '0.8rem', marginTop: '0.4rem', lineHeight: 1.35 };
+    const paddingNote =
+      !viewPlusPaddingApplies && viewPlusLeftPadCells > 0 ? (
+        <div style={{ ...style, color: 'var(--text-secondary, #666)' }}>
+          US Letter padding is off: choose <strong>8.5×11in</strong> under ⚙ Layout to apply {viewPlusLeftPadCells} cell(s).
+        </div>
+      ) : null;
+
+    return (
+      <div style={compact ? { flexBasis: '100%', marginTop: '0.35rem' } : undefined}>
+        <div style={{ ...style, color: '#0369a1' }}>
+          <strong>ViewPlus:</strong> Single-sheet feeding and driver margins vary by model; optional left padding for US Letter
+          is configured under <strong>⚙ Layout</strong>. If you tune the padding for your paper and want to share what works,
+          email{' '}
+          <a href={`mailto:${VIEWPLUS_SUPPORT_EMAIL}`}>{VIEWPLUS_SUPPORT_EMAIL}</a>.
+        </div>
+        {paddingNote}
+        {isWindows() || isMac() ? (
+          <div style={{ ...style, color: '#0369a1' }}>
+            ℹ️ <strong>Driver:</strong> Use the official ViewPlus printer driver for your embosser.
+          </div>
+        ) : null}
+        {isLinux() ? (
+          <div style={{ ...style, color: '#d97706' }}>
+            ⚠️ <strong>Linux:</strong> ViewPlus bridging is experimental and might not work.
+          </div>
+        ) : null}
+      </div>
+    );
   };
 
   if (compact) {
@@ -124,6 +164,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         )}
         <select
           className="printer-input"
+          aria-label="Embosser driver model"
           value={selectedDriverId}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedDriverId(e.target.value)}
           style={{ width: '130px', marginLeft: '0.4rem' }}
@@ -137,7 +178,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         >
           {status === 'printing' ? 'Sending…' : useWebUSB ? 'Select & Print (USB)' : 'Print'}
         </button>
-        {renderViewPlusWarning()}
+        {renderViewPlusNotice()}
         {status === 'success' && (
           <span className="print-status-ok" aria-live="polite">✓ Sent</span>
         )}
@@ -193,7 +234,7 @@ export function PrintPanel({ brf, bridgeConnected, useWebUSB, compact }: PrintPa
         >
           {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
-        {renderViewPlusWarning()}
+        {renderViewPlusNotice()}
       </div>
 
       <button
