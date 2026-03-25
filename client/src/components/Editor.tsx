@@ -21,6 +21,8 @@ interface EditorProps {
 
 export interface EditorHandle {
   insertTextAtCursor: (text: string) => void;
+  /** Replace editor content without firing onTextChange (debounced translate stays quiet). */
+  setValueFromBrailleSync: (text: string) => void;
 }
 
 /**
@@ -63,7 +65,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       ]);
       editor.pushUndoStop();
       editor.focus();
-    }
+    },
+    setValueFromBrailleSync: (text: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      isExternalUpdate.current = true;
+      editor.setValue(text);
+      isExternalUpdate.current = false;
+    },
   }));
 
   useEffect(() => {
@@ -73,7 +82,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       value: initialValue,
       language: 'plaintext',
       theme: monacoTheme,
-      wordWrap: 'wordWrapColumn',
+      wordWrap: 'off',
       wordWrapColumn: cellsPerRow,
       rulers: [cellsPerRow],
       minimap: { enabled: false },
@@ -132,7 +141,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
     isExternalUpdate.current = false;
   }, [value]);
 
-  // Keep word-wrap column and ruler in sync with page settings
+  // Keep ruler aligned with page width (visual guide only; soft breaks use U+2028).
   useEffect(() => {
     editorRef.current?.updateOptions({
       wordWrapColumn: cellsPerRow,

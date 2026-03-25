@@ -13,6 +13,7 @@ import {
   formatBrfForOutput,
   normalizeImportedBrf,
   defaultBrfDownloadFilename,
+  buildPlainTextToMatchBrailleWrap,
 } from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
@@ -161,6 +162,8 @@ export default function App() {
 
   // ── Track input stats for the status bar ────────────────────────────────
   const [inputText, setInputText] = useState('');
+  const inputTextRef = useRef(inputText);
+  inputTextRef.current = inputText;
   const wordCount = inputText.trim() === '' ? 0 : inputText.trim().split(/\s+/).length;
   const charCount = inputText.length;
 
@@ -254,6 +257,28 @@ export default function App() {
     }),
     [pageSettings.paragraphFirstLineStartCell, pageSettings.paragraphRunoverStartCell],
   );
+
+  // Match plain-text visual rows to BRF word-wrap (cells per row + paragraph margins).
+  useEffect(() => {
+    if (!workerReady || !translatedText || isPerkinsMode) return;
+    const current = inputTextRef.current;
+    const synced = buildPlainTextToMatchBrailleWrap(
+      current,
+      translatedText,
+      pageSettings.cellsPerRow,
+      paragraphStarts,
+    );
+    if (synced === current) return;
+    editorRef.current?.setValueFromBrailleSync(synced);
+    setInputText(synced);
+  }, [
+    translatedText,
+    workerReady,
+    isPerkinsMode,
+    pageSettings.cellsPerRow,
+    paragraphStarts,
+  ]);
+
   const brfPages = unicodeBraille
     ? formatBrfPages(
         unicodeBraille,

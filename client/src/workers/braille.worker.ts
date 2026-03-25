@@ -278,6 +278,9 @@ function wrapMathBrailleForLiteraryContext(braille: string, mathCode: string): s
  * Translates a block of text while preserving exact newline boundaries.
  * Liblouis tables often digest or alter newlines; manually splitting guarantees layout.
  */
+/** U+2028 soft line breaks in the editor (sync with braille wrap) are treated as spaces for liblouis. */
+const SOFT_LINE_BREAK = '\u2028';
+
 function translateTextPreservingNewlines(text: string, table: string): string {
   if (!text) return '';
   const lines = text.split('\n');
@@ -286,7 +289,8 @@ function translateTextPreservingNewlines(text: string, table: string): string {
     const hasCR = line.endsWith('\r');
     const cleanLine = hasCR ? line.slice(0, -1) : line;
     if (!cleanLine) return hasCR ? '\r' : '';
-    const translated = liblouis!.translateString(table, cleanLine) || '';
+    const forTranslate = cleanLine.replaceAll(SOFT_LINE_BREAK, ' ');
+    const translated = liblouis!.translateString(table, forTranslate) || '';
     return hasCR ? translated + '\r' : translated;
   }).join('\n');
 }

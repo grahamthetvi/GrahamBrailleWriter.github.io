@@ -1,3 +1,5 @@
+import { asciiToUnicodeBraille } from './braille';
+
 /**
  * Word-wraps a single braille line to at most `cells` characters.
  *
@@ -14,6 +16,321 @@ export type ParagraphLineStarts = {
   firstLineStartCell: number;
   runoverStartCell: number;
 };
+
+/**
+ * Soft line break inserted in the text editor so visual rows match braille wrap.
+ * Monaco treats U+2028 as a line boundary; the worker replaces it with a space before liblouis.
+ */
+export const SOFT_LINE_BREAK_CHAR = '\u2028';
+
+/** Index into the non-empty braille word list for one logical (pre-wrap) line; char range for hard breaks. */
+export type BrailleWordSpan = {
+  wordIndex: number;
+  charStart: number;
+  charEnd: number;
+};
+
+export type PhysicalBrailleLineMeta = { spans: BrailleWordSpan[] };
+
+function lineLenFromSpans(spans: BrailleWordSpan[], spaceLen: number): number {
+  if (spans.length === 0) return 0;
+  let len = 0;
+  for (let s = 0; s < spans.length; s++) {
+    len += spans[s].charEnd - spans[s].charStart;
+    if (s > 0) len += spaceLen;
+  }
+  return len;
+}
+
+/** Largest-remainder split of `n` items across buckets proportional to `weights`. */
+function splitIntegerByWeights(n: number, weights: number[]): number[] {
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (weights.length === 0) return [];
+  if (n === 0) return weights.map(() => 0);
+  if (total <= 0) {
+    const base = Math.floor(n / weights.length);
+    const out = weights.map(() => base);
+    for (let i = 0; i < n - base * weights.length; i++) out[i]++;
+    return out;
+  }
+  const raw = weights.map(w => (n * w) / total);
+  const floors = raw.map(r => Math.floor(r));
+  let rem = n - floors.reduce((a, b) => a + b, 0);
+  const order = raw.map((r, i) => ({ i, f: r - Math.floor(r) })).sort((a, b) => b.f - a.f);
+  for (let k = 0; k < rem; k++) floors[order[k].i]++;
+  return floors;
+}
+
+function mapBrailleWordIndexToSrcWordIndex(brailleWordIndex: number, mBrailleWords: number, nSrcWords: number): number {
+  if (nSrcWords <= 0) return 0;
+  if (mBrailleWords <= 0) return 0;
+  if (mBrailleWords === 1) return Math.min(nSrcWords - 1, brailleWordIndex);
+  return Math.min(nSrcWords - 1, Math.floor((brailleWordIndex * nSrcWords) / mBrailleWords));
+}
+
+function sliceSrcForBrailleSpan(
+  span: BrailleWordSpan,
+  wordsNE: string[],
+  srcWords: string[],
+  m: number,
+  n: number,
+): string {
+  const bwText = wordsNE[span.wordIndex] ?? '';
+  const Lb = Math.max(1, bwText.length);
+  const srcIdx =
+    m === n && m > 0
+      ? Math.min(span.wordIndex, Math.max(0, n - 1))
+      : mapBrailleWordIndexToSrcWordIndex(span.wordIndex, m, n);
+  const sw = srcWords[srcIdx] ?? '';
+  const Ls = sw.length;
+  if (span.charStart === 0 && span.charEnd >= bwText.length) return sw;
+  if (Ls === 0) return '';
+  const start = Math.min(Ls, Math.floor((span.charStart * Ls) / Lb));
+  const end = Math.max(start + 1, Math.min(Ls, Math.ceil((span.charEnd * Ls) / Lb)));
+  return sw.slice(start, end);
+}
+
+/**
+ * Mirrors `wrapBrailleLine` and records which braille word spans appear on each physical line.
+ */
+function wrapBrailleLineMeta(line: string, cells: number, space: string): PhysicalBrailleLineMeta[] {
+  const words = line.split(space);
+
+  const result: PhysicalBrailleLineMeta[] = [];
+  let spans: BrailleWordSpan[] = [];
+  const spaceLen = space.length;
+
+  let wordIdx = 0;
+  for (const word of words) {
+    if (word.length === 0) continue;
+    const wi = wordIdx;
+    wordIdx++;
+
+    if (word.length > cells) {
+      if (spans.length > 0) {
+        result.push({ spans: [...spans] });
+        spans = [];
+      }
+      for (let i = 0; i < word.length; i += cells) {
+        const chunk = word.slice(i, i + cells);
+        if (chunk.length === cells) {
+          result.push({
+            spans: [{ wordIndex: wi, charStart: i, charEnd: i + cells }],
+          });
+        } else {
+          spans = [{ wordIndex: wi, charStart: i, charEnd: word.length }];
+        }
+      }
+    } else {
+      const trial = [...spans, { wordIndex: wi, charStart: 0, charEnd: word.length }];
+      const needed = lineLenFromSpans(trial, spaceLen);
+      if (needed <= cells) {
+        spans = trial;
+      } else {
+        if (spans.length > 0) result.push({ spans: [...spans] });
+        spans = [{ wordIndex: wi, charStart: 0, charEnd: word.length }];
+      }
+    }
+  }
+
+  if (spans.length > 0) result.push({ spans: [...spans] });
+  return result;
+}
+
+/**
+ * Mirrors `wrapBrailleLineWithParagraphStarts` with span metadata per physical line.
+ */
+function wrapBrailleLineWithParagraphStartsMeta(
+  line: string,
+  cellsPerRow: number,
+  firstLineStartCell: number,
+  runoverStartCell: number,
+  space: string,
+): PhysicalBrailleLineMeta[] {
+  const cells = Math.max(1, cellsPerRow);
+  const firstCell = clampParagraphCell(firstLineStartCell, cells);
+  const runCell = clampParagraphCell(runoverStartCell, cells);
+  const marginFirst = firstCell - 1;
+  const marginRun = runCell - 1;
+  const capFirst = Math.max(1, cells - marginFirst);
+  const capRun = Math.max(1, cells - marginRun);
+
+  const words = line.split(space);
+
+  const result: PhysicalBrailleLineMeta[] = [];
+  let spans: BrailleWordSpan[] = [];
+  let onFirstLine = true;
+  const spaceLen = space.length;
+
+  const cap = () => (onFirstLine ? capFirst : capRun);
+
+  const pushCurrent = () => {
+    if (spans.length === 0) return;
+    result.push({ spans: [...spans] });
+    spans = [];
+    onFirstLine = false;
+  };
+
+  let wordIdx = 0;
+  for (const word of words) {
+    if (word.length === 0) continue;
+    const wi = wordIdx;
+    wordIdx++;
+
+    if (word.length > cap()) {
+      if (spans.length > 0) pushCurrent();
+      let remaining = word;
+      let pos = 0;
+      while (remaining.length > 0) {
+        const c = cap();
+        const chunk = remaining.slice(0, c);
+        remaining = remaining.slice(c);
+        const chunkLen = chunk.length;
+        result.push({
+          spans: [{ wordIndex: wi, charStart: pos, charEnd: pos + chunkLen }],
+        });
+        pos += chunkLen;
+        onFirstLine = false;
+      }
+      continue;
+    }
+
+    const trial = [...spans, { wordIndex: wi, charStart: 0, charEnd: word.length }];
+    const contentLen = lineLenFromSpans(trial, spaceLen);
+    if (contentLen <= cap()) {
+      spans = trial;
+    } else {
+      pushCurrent();
+      spans = [{ wordIndex: wi, charStart: 0, charEnd: word.length }];
+    }
+  }
+  pushCurrent();
+  return result;
+}
+
+function physicalLinesMetaForUnicodeLine(
+  unicodeLine: string,
+  cellsPerRow: number,
+  paragraphStarts: ParagraphLineStarts | undefined,
+  brailleSpace: string,
+): PhysicalBrailleLineMeta[] {
+  const cells = Math.max(1, cellsPerRow);
+  const firstStart = paragraphStarts?.firstLineStartCell ?? 1;
+  const runStart = paragraphStarts?.runoverStartCell ?? 1;
+  const useParagraphStarts = firstStart > 1 || runStart > 1;
+
+  if (!unicodeLine) return [];
+  if (useParagraphStarts) {
+    return wrapBrailleLineWithParagraphStartsMeta(
+      unicodeLine,
+      cells,
+      firstStart,
+      runStart,
+      brailleSpace,
+    );
+  }
+  if (unicodeLine.length <= cells) {
+    const words = unicodeLine.split(brailleSpace).filter(w => w.length > 0);
+    if (words.length === 0) return [{ spans: [] }];
+    const spans: BrailleWordSpan[] = words.map((w, i) => ({
+      wordIndex: i,
+      charStart: 0,
+      charEnd: w.length,
+    }));
+    return [{ spans }];
+  }
+  return wrapBrailleLineMeta(unicodeLine, cells, brailleSpace);
+}
+
+/**
+ * Builds plain text for one source row so soft line breaks (U+2028) align with braille cell wrap.
+ */
+function syncPlainLineToBrailleWrap(
+  sourceLine: string,
+  unicodeBrailleLine: string,
+  cellsPerRow: number,
+  paragraphStarts: ParagraphLineStarts | undefined,
+): string {
+  const BRAILLE_SPACE = '\u2800';
+  const canonicalSrc = sourceLine.replaceAll(SOFT_LINE_BREAK_CHAR, ' ');
+  const srcWords = canonicalSrc.trim() === '' ? [] : canonicalSrc.trim().split(/\s+/);
+
+  if (!unicodeBrailleLine.trim()) {
+    return canonicalSrc;
+  }
+
+  const brfWords = unicodeBrailleLine.split(BRAILLE_SPACE).filter(w => w.length > 0);
+  const physical = physicalLinesMetaForUnicodeLine(
+    unicodeBrailleLine,
+    cellsPerRow,
+    paragraphStarts,
+    BRAILLE_SPACE,
+  );
+
+  if (physical.length === 0) return canonicalSrc;
+
+  const m = brfWords.length;
+  const n = srcWords.length;
+
+  if (n === 0) {
+    return canonicalSrc;
+  }
+
+  if (m === n && n > 0) {
+    const lineParts: string[] = [];
+    for (const pl of physical) {
+      const segParts: string[] = [];
+      for (const sp of pl.spans) {
+        segParts.push(sliceSrcForBrailleSpan(sp, brfWords, srcWords, m, n));
+      }
+      lineParts.push(segParts.join(' ').trimEnd());
+    }
+    return lineParts.join(SOFT_LINE_BREAK_CHAR);
+  }
+
+  const lineWeights = physical.map(pl => {
+    let w = 0;
+    for (const sp of pl.spans) {
+      w += sp.charEnd - sp.charStart;
+    }
+    if (pl.spans.length > 1) w += pl.spans.length - 1;
+    return Math.max(1, w);
+  });
+
+  const counts = splitIntegerByWeights(n, lineWeights);
+  const outLines: string[] = [];
+  let offset = 0;
+  for (let li = 0; li < physical.length; li++) {
+    const take = counts[li] ?? 0;
+    const slice = srcWords.slice(offset, offset + take);
+    offset += take;
+    outLines.push(slice.join(' '));
+  }
+  return outLines.join(SOFT_LINE_BREAK_CHAR);
+}
+
+/**
+ * Inserts U+2028 between visual rows so plain text line breaks match BRF word-wrap for the same layout settings.
+ * User newlines (`\\n`) are preserved as paragraph boundaries; translation should treat U+2028 as a space (see worker).
+ */
+export function buildPlainTextToMatchBrailleWrap(
+  sourceText: string,
+  asciiBrf: string,
+  cellsPerRow: number,
+  paragraphStarts?: ParagraphLineStarts,
+): string {
+  const srcLines = sourceText.split('\n');
+  const brfLines = asciiBrf.split('\n');
+  const max = Math.max(srcLines.length, brfLines.length);
+  const out: string[] = [];
+  for (let i = 0; i < max; i++) {
+    const s = srcLines[i] ?? '';
+    const b = brfLines[i] ?? '';
+    const unicode = asciiToUnicodeBraille(b);
+    out.push(syncPlainLineToBrailleWrap(s, unicode, cellsPerRow, paragraphStarts));
+  }
+  return out.join('\n');
+}
 
 function clampParagraphCell(n: number, cellsPerRow: number): number {
   const max = Math.max(1, cellsPerRow);
