@@ -18,10 +18,15 @@ export type ParagraphLineStarts = {
 };
 
 /**
- * Soft line break inserted in the text editor so visual rows match braille wrap.
- * Monaco treats U+2028 as a line boundary; the worker replaces it with a space before liblouis.
+ * Soft line break between visual rows so plain text matches BRF cell wrap.
+ * Uses CR-only (\\r) so editors do not flag "unusual line terminators" (LS/U+2028, PS).
+ * User paragraph boundaries remain \\n; the worker strips \\r to a space before liblouis.
+ * Legacy U+2028 from older builds is normalized away when building canonical text.
  */
-export const SOFT_LINE_BREAK_CHAR = '\u2028';
+export const SOFT_LINE_BREAK_CHAR = '\r';
+
+/** Previous soft-wrap character — still stripped when normalizing for translate/sync. */
+const LEGACY_SOFT_LINE_BREAK_CHAR = '\u2028';
 
 /** Index into the non-empty braille word list for one logical (pre-wrap) line; char range for hard breaks. */
 export type BrailleWordSpan = {
@@ -243,7 +248,7 @@ function physicalLinesMetaForUnicodeLine(
 }
 
 /**
- * Builds plain text for one source row so soft line breaks (U+2028) align with braille cell wrap.
+ * Builds plain text for one source row so soft line breaks align with braille cell wrap.
  */
 function syncPlainLineToBrailleWrap(
   sourceLine: string,
@@ -252,7 +257,9 @@ function syncPlainLineToBrailleWrap(
   paragraphStarts: ParagraphLineStarts | undefined,
 ): string {
   const BRAILLE_SPACE = '\u2800';
-  const canonicalSrc = sourceLine.replaceAll(SOFT_LINE_BREAK_CHAR, ' ');
+  const canonicalSrc = sourceLine
+    .replaceAll(SOFT_LINE_BREAK_CHAR, ' ')
+    .replaceAll(LEGACY_SOFT_LINE_BREAK_CHAR, ' ');
   const srcWords = canonicalSrc.trim() === '' ? [] : canonicalSrc.trim().split(/\s+/);
 
   if (!unicodeBrailleLine.trim()) {
@@ -310,8 +317,8 @@ function syncPlainLineToBrailleWrap(
 }
 
 /**
- * Inserts U+2028 between visual rows so plain text line breaks match BRF word-wrap for the same layout settings.
- * User newlines (`\\n`) are preserved as paragraph boundaries; translation should treat U+2028 as a space (see worker).
+ * Inserts soft line breaks (`\\r`) between visual rows so plain text matches BRF word-wrap.
+ * User newlines (`\\n`) stay paragraph boundaries; the worker turns soft breaks into spaces (see worker).
  */
 export function buildPlainTextToMatchBrailleWrap(
   sourceText: string,

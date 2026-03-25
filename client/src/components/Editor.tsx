@@ -141,7 +141,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
     isExternalUpdate.current = false;
   }, [value]);
 
-  // Keep ruler aligned with page width (visual guide only; soft breaks use U+2028).
+  // Keep ruler aligned with page width (visual guide only; soft breaks use \\r between wrapped rows).
   useEffect(() => {
     editorRef.current?.updateOptions({
       wordWrapColumn: cellsPerRow,
