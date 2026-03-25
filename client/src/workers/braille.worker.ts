@@ -201,6 +201,7 @@ import {
   UEB_NEMETH_OPEN_ASCII,
   unicodeBrailleToAscii,
 } from '../utils/braille';
+import { DEFAULT_TABLE } from '../utils/tableRegistry';
 
 // Initialize SRE for Nemeth or UEB Braille output
 let currentMathCode = '';
@@ -453,7 +454,7 @@ async function convertMathOnly(text: string, mathCode: string): Promise<string> 
 // ─── Message handler ─────────────────────────────────────────────────────────
 
 self.addEventListener('message', async (event: MessageEvent) => {
-  const { type, text, table = 'en-ueb-g2.ctb', mathCode = 'nemeth' } = event.data as {
+  const { type, text, table = DEFAULT_TABLE, mathCode = 'nemeth' } = event.data as {
     type?: string;
     text: string;
     table?: string;

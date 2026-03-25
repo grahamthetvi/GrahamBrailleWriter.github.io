@@ -3,7 +3,7 @@
  *
  * Usage:
  *   const { translate, translatedText, isLoading, progress, error } = useBraille();
- *   translate('Hello world', 'en-ueb-g2.ctb');
+ *   translate('Hello world', 'en-ueb-g1.ctb');
  *
  * The worker is an ES module worker (Vite worker format: 'es').
  * Message protocol matches workers/braille.worker.ts:
@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { DEFAULT_TABLE } from '../utils/tableRegistry';
 
 export type BrailleTable = 'en-ueb-g2.ctb' | 'en-ueb-g1.ctb' | 'en-us-g1.ctb' | 'en-us-g2.ctb';
 export type MathCode = 'nemeth' | 'ueb';
@@ -129,7 +130,7 @@ export function useBraille(): UseBrailleReturn {
   // -------------------------------------------------------------------------
   // Public translate function
   // -------------------------------------------------------------------------
-  const translate = useCallback((text: string, table = 'en-ueb-g2.ctb', mathCode: MathCode = 'nemeth') => {
+  const translate = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth') => {
     if (!workerRef.current) return;
     setIsLoading(true);
     setProgress(0);
@@ -151,7 +152,7 @@ export function useBraille(): UseBrailleReturn {
     });
   }, []);
 
-  const backTranslateBrf = useCallback((brf: string, table = 'en-ueb-g2.ctb'): Promise<BackTranslateBrfResult> => {
+  const backTranslateBrf = useCallback((brf: string, table = DEFAULT_TABLE): Promise<BackTranslateBrfResult> => {
     return new Promise((resolve, reject) => {
       if (!workerRef.current) {
         reject(new Error('Worker not ready'));

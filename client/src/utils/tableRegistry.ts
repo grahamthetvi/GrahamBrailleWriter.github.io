@@ -28,8 +28,8 @@ export const TABLE_GROUPS: BrailleTableGroup[] = [
   {
     group: 'English',
     tables: [
-      { name: 'English — UEB Grade 2  (Contracted, default)', file: 'en-ueb-g2.ctb' },
-      { name: 'English — UEB Grade 1  (Uncontracted)', file: 'en-ueb-g1.ctb' },
+      { name: 'English — UEB Grade 2  (Contracted)', file: 'en-ueb-g2.ctb' },
+      { name: 'English — UEB Grade 1  (Uncontracted, default)', file: 'en-ueb-g1.ctb' },
       { name: 'English — US Grade 2   (EBAE Contracted)', file: 'en-us-g2.ctb' },
       { name: 'English — US Grade 1   (EBAE)', file: 'en-us-g1.ctb' },
       { name: 'English — US Computer  (6-dot)', file: 'en-us-comp6.ctb' },
@@ -169,7 +169,7 @@ export const TABLE_GROUPS: BrailleTableGroup[] = [
 export const ALL_TABLES: BrailleTableEntry[] = TABLE_GROUPS.flatMap(g => g.tables);
 
 /** The default table filename used across the app. */
-export const DEFAULT_TABLE = 'en-ueb-g2.ctb';
+export const DEFAULT_TABLE = 'en-ueb-g1.ctb';
 
 /** Return the human-readable name for a given table filename, or the filename itself if not found. */
 export function tableLabel(file: string): string {
