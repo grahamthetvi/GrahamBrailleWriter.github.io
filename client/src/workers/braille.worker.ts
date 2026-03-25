@@ -193,6 +193,14 @@ async function init(): Promise<void> {
 import katex from 'katex';
 // @ts-expect-error - no types available for speech-rule-engine
 import * as sre from 'speech-rule-engine';
+import {
+  NEMETH_INDICATOR_PAD,
+  UEB_NEMETH_CLOSE,
+  UEB_NEMETH_CLOSE_ASCII,
+  UEB_NEMETH_OPEN,
+  UEB_NEMETH_OPEN_ASCII,
+  unicodeBrailleToAscii,
+} from '../utils/braille';
 
 // Initialize SRE for Nemeth or UEB Braille output
 let currentMathCode = '';
@@ -251,14 +259,8 @@ async function translateMath(latex: string, mathCode: string): Promise<string> {
   }
 }
 
-/**
- * UEB Nemeth passage indicators (BANA): open dots 456 + 146 — close dots 456, 156.
- * Literary text uses UEB; SRE outputs Nemeth cells only, so these mark the switch.
- * Spacing separates each indicator from the Nemeth body.
- */
-const UEB_NEMETH_OPEN = '\u2838\u2829'; // cell1: 456; cell2: dots 1, 4, 6
-const UEB_NEMETH_CLOSE = '\u2838\u2831';
-const NEMETH_INDICATOR_PAD = ' ';
+/** Liblouis table for Nemeth body back-translation (matches tableRegistry). */
+const NEMETH_BACK_TRANSLATE_TABLE = 'nemeth.ctb';
 
 function wrapMathBrailleForLiteraryContext(braille: string, mathCode: string): string {
   if (mathCode !== 'nemeth' || !braille) return braille;
@@ -304,6 +306,57 @@ function backTranslateTextPreservingNewlines(brf: string, table: string): string
     const plain = liblouis!.backTranslateString(table, cleanLine) || '';
     return hasCR ? plain + '\r' : plain;
   }).join('\n');
+}
+
+/**
+ * Finds UEB Nemeth passage markers (Unicode or ASCII BRF), splits literary vs Nemeth body,
+ * and back-translates each with the appropriate table.
+ */
+function splitNemethAsciiPassages(asciiBrf: string): Array<{ kind: 'lit' | 'nemeth'; text: string }> {
+  const head = UEB_NEMETH_OPEN_ASCII + NEMETH_INDICATOR_PAD;
+  const tail = NEMETH_INDICATOR_PAD + UEB_NEMETH_CLOSE_ASCII;
+  const segments: Array<{ kind: 'lit' | 'nemeth'; text: string }> = [];
+  let i = 0;
+  while (i < asciiBrf.length) {
+    const start = asciiBrf.indexOf(head, i);
+    if (start === -1) {
+      if (i < asciiBrf.length) {
+        segments.push({ kind: 'lit', text: asciiBrf.slice(i) });
+      }
+      break;
+    }
+    if (start > i) {
+      segments.push({ kind: 'lit', text: asciiBrf.slice(i, start) });
+    }
+    const afterOpen = start + head.length;
+    const closeIdx = asciiBrf.indexOf(tail, afterOpen);
+    if (closeIdx === -1) {
+      segments.push({ kind: 'lit', text: asciiBrf.slice(start) });
+      break;
+    }
+    segments.push({ kind: 'nemeth', text: asciiBrf.slice(afterOpen, closeIdx) });
+    i = closeIdx + tail.length;
+  }
+  return segments;
+}
+
+function backTranslateBrfRespectingNemethPassages(brf: string, textTable: string): string {
+  const ascii = unicodeBrailleToAscii(brf);
+  const head = UEB_NEMETH_OPEN_ASCII + NEMETH_INDICATOR_PAD;
+  if (ascii.indexOf(head) === -1) {
+    return backTranslateTextPreservingNewlines(ascii, textTable);
+  }
+  const segments = splitNemethAsciiPassages(ascii);
+  let plain = '';
+  for (const seg of segments) {
+    if (seg.kind === 'lit') {
+      plain += backTranslateTextPreservingNewlines(seg.text, textTable);
+    } else {
+      const n = backTranslateTextPreservingNewlines(seg.text, NEMETH_BACK_TRANSLATE_TABLE);
+      plain += n || seg.text;
+    }
+  }
+  return plain;
 }
 
 /**
@@ -413,7 +466,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
       if (!brf.trim()) {
         self.postMessage({ type: 'BACK_TRANSLATE_RESULT', plainText: '', brf });
       } else {
-        const plainText = backTranslateTextPreservingNewlines(brf, table);
+        const plainText = backTranslateBrfRespectingNemethPassages(brf, table);
         self.postMessage({ type: 'BACK_TRANSLATE_RESULT', plainText, brf });
       }
     } catch (err) {

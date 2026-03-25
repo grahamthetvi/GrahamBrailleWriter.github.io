@@ -16,6 +16,46 @@ const BRF_TO_UNICODE_OFFSETS = [
     0x2D, 0x3D, 0x35, 0x2A, 0x33, 0x3B, 0x18, 0x38   // 0x58-0x5F: X, Y, Z, [, \, ], ^, _
 ];
 
+/** Dot-pattern offset (0–0xFF) → first matching North American BRF character (inverse of asciiToUnicodeBraille). */
+const UNICODE_OFFSET_TO_ASCII: string[] = (() => {
+    const map: string[] = [];
+    for (let i = 0; i < 64; i++) {
+        const off = BRF_TO_UNICODE_OFFSETS[i];
+        if (map[off] === undefined) {
+            map[off] = String.fromCharCode(0x20 + i);
+        }
+    }
+    return map;
+})();
+
+/**
+ * Converts Unicode braille cells (U+2800–U+28FF) to North American ASCII BRF where mapped.
+ * Other characters (newlines, spaces, unmapped cells) are left unchanged.
+ */
+export function unicodeBrailleToAscii(s: string): string {
+    let out = '';
+    for (const ch of s) {
+        const cp = ch.codePointAt(0)!;
+        if (cp >= 0x2800 && cp <= 0x28ff) {
+            const offset = cp - 0x2800;
+            const mapped = UNICODE_OFFSET_TO_ASCII[offset];
+            out += mapped !== undefined ? mapped : ch;
+        } else {
+            out += ch;
+        }
+    }
+    return out;
+}
+
+/** UEB Nemeth passage markers (must match braille.worker wrap). */
+export const UEB_NEMETH_OPEN = '\u2838\u2829';
+export const UEB_NEMETH_CLOSE = '\u2838\u2831';
+export const NEMETH_INDICATOR_PAD = ' ';
+
+/** Same markers in ASCII BRF (e.g. after unicodeBrailleToAscii). */
+export const UEB_NEMETH_OPEN_ASCII = unicodeBrailleToAscii(UEB_NEMETH_OPEN);
+export const UEB_NEMETH_CLOSE_ASCII = unicodeBrailleToAscii(UEB_NEMETH_CLOSE);
+
 export function asciiToUnicodeBraille(asciiString: string): string {
     let unicodeStr = "";
     for (let i = 0; i < asciiString.length; i++) {
