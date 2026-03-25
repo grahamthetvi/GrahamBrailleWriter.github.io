@@ -544,6 +544,24 @@ export function defaultBrfDownloadFilename(): string {
   return `braille-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.brf`;
 }
 
+/** Default name for the left-pane print-layout text export. */
+export function defaultPrintLayoutTextFilename(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `print-layout-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.txt`;
+}
+
+/**
+ * Converts editor buffer (soft breaks = {@link SOFT_LINE_BREAK_CHAR}, user lines = \\n) to plain text
+ * suitable for printing: one file line per visual row so layout matches the braille preview.
+ */
+export function formatPlainTextForPrintDownload(editorContent: string): string {
+  return editorContent
+    .replaceAll('\r\n', '\n')
+    .replaceAll(LEGACY_SOFT_LINE_BREAK_CHAR, '\n')
+    .replaceAll(SOFT_LINE_BREAK_CHAR, '\n');
+}
+
 /**
  * Formats raw ASCII BRF for download / embosser printing.
  * Hard-wraps at cellsPerRow using word-aware wrapping, paginates with

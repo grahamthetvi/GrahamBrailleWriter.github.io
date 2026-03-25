@@ -13,6 +13,8 @@ import {
   formatBrfForOutput,
   normalizeImportedBrf,
   defaultBrfDownloadFilename,
+  defaultPrintLayoutTextFilename,
+  formatPlainTextForPrintDownload,
   buildPlainTextToMatchBrailleWrap,
 } from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
@@ -248,6 +250,18 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  function handleDownloadPrintLayoutText() {
+    if (!inputText.trim()) return;
+    const body = formatPlainTextForPrintDownload(inputText);
+    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = defaultPrintLayoutTextFilename();
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // ── Paginated braille output ─────────────────────────────────────────────
   const unicodeBraille = translatedText ? asciiToUnicodeBraille(translatedText) : '';
   const paragraphStarts = useMemo(
@@ -478,6 +492,16 @@ export default function App() {
             aria-label="Download translated BRF file"
           >
             Download BRF
+          </button>
+
+          <button
+            className="toolbar-btn"
+            onClick={handleDownloadPrintLayoutText}
+            disabled={!inputText.trim() || isPerkinsMode}
+            title="Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
+            aria-label="Download print layout text file"
+          >
+            Download print layout
           </button>
 
           {/* Print to Embosser toggle */}
