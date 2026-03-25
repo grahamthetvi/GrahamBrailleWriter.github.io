@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import {
+    buildDotsSpeech,
+    buildFingersSpeech,
+    cancelPerkinsSpeech,
+    getActiveDotNumbers,
+    speakPerkinsHint,
+} from '../utils/perkinsSpeech';
 import { getStaticDots } from '../utils/staticBraille';
 import '../PerkinsViewer.css';
 
@@ -23,6 +30,17 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
     const currentChar = hasContent ? characters[currentIndex] : '';
     const isSpace = currentChar === ' ';
     const dots = getStaticDots(currentChar);
+    const activeDots = getActiveDotNumbers(dots);
+
+    useEffect(() => () => cancelPerkinsSpeech(), []);
+
+    const speakDots = useCallback(() => {
+        speakPerkinsHint(buildDotsSpeech(activeDots, isSpace));
+    }, [activeDots, isSpace]);
+
+    const speakFingers = useCallback(() => {
+        speakPerkinsHint(buildFingersSpeech(activeDots, isSpace));
+    }, [activeDots, isSpace]);
 
     const prevChar = () => {
         if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
@@ -114,6 +132,29 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
                     </div>
 
                 </div>
+            </div>
+
+            <div
+                className="perkins-audio"
+                role="group"
+                aria-label="Speak braille dot and finger hints for the current character"
+            >
+                <button
+                    type="button"
+                    className="toolbar-btn"
+                    onClick={speakDots}
+                    title="Read which dots to press at once, in order 1 through 6"
+                >
+                    Speak dots
+                </button>
+                <button
+                    type="button"
+                    className="toolbar-btn"
+                    onClick={speakFingers}
+                    title="Read which fingers to use: left pointer to ring for dots 1–3, right pointer to ring for dots 4–6"
+                >
+                    Speak fingers
+                </button>
             </div>
 
             <div className="perkins-navigation">
