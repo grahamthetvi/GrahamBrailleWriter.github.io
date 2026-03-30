@@ -69,8 +69,24 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
     setValueFromBrailleSync: (text: string) => {
       const editor = editorRef.current;
       if (!editor) return;
+      const selections = editor.getSelections();
       isExternalUpdate.current = true;
-      editor.setValue(text);
+
+      const model = editor.getModel();
+      if (model) {
+        editor.executeEdits('braille-sync', [{
+          range: model.getFullModelRange(),
+          text: text,
+          forceMoveMarkers: true
+        }]);
+        editor.pushUndoStop();
+      } else {
+        editor.setValue(text);
+      }
+
+      if (selections && selections.length > 0) {
+        editor.setSelections(selections);
+      }
       isExternalUpdate.current = false;
     },
   }));

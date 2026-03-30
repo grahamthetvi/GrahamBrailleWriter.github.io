@@ -67,6 +67,8 @@ export function useBraille(): UseBrailleReturn {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [workerReady, setWorkerReady] = useState(false);
+  const isWorkerReadyRef = useRef(false);
+  const pendingTranslateRef = useRef<{ text: string; table: string; mathCode: MathCode } | null>(null);
 
   // -------------------------------------------------------------------------
   // Spawn / tear down the worker
@@ -96,6 +98,7 @@ export function useBraille(): UseBrailleReturn {
 
       if (msg.type === 'READY') {
         setWorkerReady(true);
+        isWorkerReadyRef.current = true;
         setIsLoading(false);
       } else if (msg.type === 'PROGRESS') {
         setProgress(msg.percent);
@@ -144,6 +147,7 @@ export function useBraille(): UseBrailleReturn {
     };
   }, [initWorker]);
 
+
   const startWorkerTask = useCallback(() => {
     setIsLoading(true);
     setProgress(0);
@@ -162,6 +166,11 @@ export function useBraille(): UseBrailleReturn {
   // -------------------------------------------------------------------------
   const translate = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth') => {
     if (!workerRef.current) return;
+    if (!isWorkerReadyRef.current) {
+      pendingTranslateRef.current = { text, table, mathCode };
+      setIsLoading(true);
+      return;
+    }
     startWorkerTask();
     workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode });
   }, [startWorkerTask]);
@@ -192,6 +201,14 @@ export function useBraille(): UseBrailleReturn {
       workerRef.current.postMessage({ type: 'BACK_TRANSLATE', text: brf, table });
     });
   }, [startWorkerTask]);
+
+  useEffect(() => {
+    if (workerReady && pendingTranslateRef.current) {
+      const { text, table, mathCode } = pendingTranslateRef.current;
+      pendingTranslateRef.current = null;
+      translate(text, table, mathCode);
+    }
+  }, [workerReady, translate]);
 
   return {
     translate,
