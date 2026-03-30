@@ -83,7 +83,7 @@ export function PrintPanel({
     setErrorMsg('');
     try {
       let activeBrf = brf;
-      if (viewPlusLeftPadCells > 0) {
+      if (viewPlusPaddingApplies && viewPlusLeftPadCells > 0) {
         const pad = ' '.repeat(viewPlusLeftPadCells);
         activeBrf = activeBrf.split(/\r?\n/).map(line => pad + line).join('\n');
       }

@@ -202,7 +202,7 @@ export default function App() {
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
   // ── Autosave ────────────────────────────────────────────────────────────
-  const { clearAutosave } = useAutosave(inputText, (restored) => {
+  useAutosave(inputText, (restored) => {
     setInputText(restored);
     setFileContent(restored);
     if (restored.trim()) {
