@@ -82,12 +82,15 @@ export function PrintPanel({
     setStatus('printing');
     setErrorMsg('');
     try {
+      let activeBrf = brf;
+      if (viewPlusLeftPadCells > 0) {
+        const pad = ' '.repeat(viewPlusLeftPadCells);
+        activeBrf = activeBrf.split(/\r?\n/).map(line => pad + line).join('\n');
+      }
+
       const embosser = EmbosserFactory.getEmbosser(selectedDriverId);
-      const effectiveViewPlusPad =
-        selectedDriverId === 'viewplus' && viewPlusPaddingApplies ? viewPlusLeftPadCells : 0;
-      const bytes = embosser.generateBytes(brf, {
+      const bytes = embosser.generateBytes(activeBrf, {
         copies: 1,
-        ...(selectedDriverId === 'viewplus' ? { viewPlusLeftPadCells: effectiveViewPlusPad } : {}),
       });
 
       if (useWebUSB) {
@@ -106,22 +109,15 @@ export function PrintPanel({
     if (selectedDriverId !== 'viewplus') return null;
 
     const style = { fontSize: '0.8rem', marginTop: '0.4rem', lineHeight: 1.35 };
-    const paddingNote =
-      !viewPlusPaddingApplies && viewPlusLeftPadCells > 0 ? (
-        <div style={{ ...style, color: 'var(--text-secondary, #666)' }}>
-          US Letter padding is off: choose <strong>8.5×11in</strong> under ⚙ Layout to apply {viewPlusLeftPadCells} cell(s).
-        </div>
-      ) : null;
 
     return (
       <div style={compact ? { flexBasis: '100%', marginTop: '0.35rem' } : undefined}>
         <div style={{ ...style, color: '#0369a1' }}>
-          <strong>ViewPlus:</strong> Single-sheet feeding and driver margins vary by model; optional left padding for US Letter
-          is configured under <strong>⚙ Layout</strong>. If you tune the padding for your paper and want to share what works,
+          <strong>ViewPlus:</strong> Single-sheet feeding and driver margins vary by model.
+          If you tune the layout for your paper and want to share what works,
           email{' '}
           <a href={`mailto:${VIEWPLUS_SUPPORT_EMAIL}`}>{VIEWPLUS_SUPPORT_EMAIL}</a>.
         </div>
-        {paddingNote}
         {isWindows() || isMac() ? (
           <div style={{ ...style, color: '#0369a1' }}>
             ℹ️ <strong>Driver:</strong> Use the official ViewPlus printer driver for your embosser.

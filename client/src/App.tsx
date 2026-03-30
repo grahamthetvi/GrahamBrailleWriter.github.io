@@ -7,6 +7,7 @@ import { WelcomeModal } from './components/WelcomeModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille } from './hooks/useBraille';
+import { useAutosave } from './hooks/useAutosave';
 import { asciiToUnicodeBraille } from './utils/braille';
 import {
   formatBrfPages,
@@ -199,6 +200,15 @@ export default function App() {
   // Separate state that is only set on file load or math conversion; passed as `value` to Editor
   // so Monaco's content is replaced. Kept out of inputText feedback loop.
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
+
+  // ── Autosave ────────────────────────────────────────────────────────────
+  const { clearAutosave } = useAutosave(inputText, (restored) => {
+    setInputText(restored);
+    setFileContent(restored);
+    if (restored.trim()) {
+      translate(restored, selectedTable, 'nemeth');
+    }
+  });
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -763,38 +773,27 @@ export default function App() {
                     Common: 32 × 25 (8.5×11), 40 × 25 (11×11.5)
                   </p>
 
-                  <div className="viewplus-layout-block" role="group" aria-label="ViewPlus embosser padding">
-                    <div className="viewplus-layout-heading">ViewPlus embossing</div>
+                  <div className="viewplus-layout-block" role="group" aria-label="Embosser edge padding">
+                    <div className="viewplus-layout-heading">Embosser edge padding</div>
                     <p className="viewplus-layout-note">
-                      Some ViewPlus models (e.g. Max, Rogue, Premier) feed single sheets from the right edge; the driver’s
-                      printable origin may not line up with US Letter the same way on every unit. We can add optional{' '}
-                      <strong>left padding</strong> (blank cells) on each line when you print <strong>US Letter (8.5×11)</strong>{' '}
-                      from this app. If you need a different value for your paper or embosser, adjust the number below. If you
-                      find a setting that works well for your setup and want to share it, email{' '}
-                      <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a>.
+                      If your embosser feeds sheets offset and loses characters on the left edge, we can add optional{' '}
+                      <strong>left padding</strong> (blank cells) on each line. This applies to <strong>any embosser</strong> and paper size. If you
+                      find a setting that works well for your setup, email{' '}
+                      <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a> so we can add it to the presets.
                     </p>
                     <label className="settings-field">
-                      <span>ViewPlus left padding (cells)</span>
+                      <span>Left padding (cells)</span>
                       <input
                         type="number"
                         min={0}
                         max={80}
                         value={pageSettings.viewPlusLeftPadCells}
                         onChange={handleViewPlusPadChange}
-                        aria-label="ViewPlus left padding in braille cells"
+                        aria-label="Left padding in braille cells"
                       />
                     </label>
                     <p className="settings-hint viewplus-padding-hint">
-                      {pageSettings.paperFormat === 'us-letter' ? (
-                        <>
-                          Padding is <strong>applied</strong> to ViewPlus print jobs while this layout is US Letter (8.5×11).
-                        </>
-                      ) : (
-                        <>
-                          Padding is <strong>not applied</strong> until you choose <strong>8.5×11in</strong> above (or 32 × 25
-                          matching US Letter). Your value is saved for when you switch.
-                        </>
-                      )}
+                      Padding is <strong>applied</strong> to all print jobs.
                     </p>
                     <label className="settings-field">
                       <span>Quick preset</span>

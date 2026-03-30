@@ -1,9 +1,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm,ctb,txt}'],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+      },
+      manifest: {
+        name: 'Graham Braille Editor',
+        short_name: 'Braille Editor',
+        description: 'Braille Editing & Embossing Suite',
+        theme_color: '#2a0a0d',
+        background_color: '#2a0a0d',
+        display: 'standalone',
+      }
+    })
+  ],
 
   // Set base to '/' for custom domain deployments.
   // Override via VITE_BASE_URL env var if needed.

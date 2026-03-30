@@ -285,6 +285,8 @@ body {
   background: var(--bg-overlay);
   border: 1px solid var(--border);
   border-radius: 4px;
+  max-height: 45vh;
+  overflow-y: auto;
 }
 
 .settings-field {

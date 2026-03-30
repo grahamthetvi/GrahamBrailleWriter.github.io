@@ -50,8 +50,12 @@ export interface UseBrailleReturn {
   workerReady: boolean;
 }
 
+const WORKER_TIMEOUT_MS = 30000;
+
 export function useBraille(): UseBrailleReturn {
   const workerRef = useRef<Worker | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   const convertMathResolvers = useRef<Array<(result: string) => void>>([]);
   const pendingBackTranslateRef = useRef<{
     resolve: (v: BackTranslateBrfResult) => void;
@@ -67,7 +71,11 @@ export function useBraille(): UseBrailleReturn {
   // -------------------------------------------------------------------------
   // Spawn / tear down the worker
   // -------------------------------------------------------------------------
-  useEffect(() => {
+  const initWorker = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+    }
+    
     const worker = new Worker(
       new URL('../workers/braille.worker.ts', import.meta.url),
       { type: 'module' },
@@ -81,6 +89,10 @@ export function useBraille(): UseBrailleReturn {
         | { type: 'BACK_TRANSLATE_RESULT'; plainText: string; brf: string }
         | { type: 'PROGRESS'; percent: number }
         | { type: 'ERROR'; error: string };
+
+      if (['RESULT', 'CONVERT_MATH_RESULT', 'BACK_TRANSLATE_RESULT', 'ERROR'].includes(msg.type)) {
+         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      }
 
       if (msg.type === 'READY') {
         setWorkerReady(true);
@@ -113,6 +125,7 @@ export function useBraille(): UseBrailleReturn {
     });
 
     worker.addEventListener('error', (e: ErrorEvent) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       const pendingBt = pendingBackTranslateRef.current;
       pendingBackTranslateRef.current = null;
       if (pendingBt) pendingBt.reject(new Error(e.message));
@@ -121,22 +134,37 @@ export function useBraille(): UseBrailleReturn {
     });
 
     workerRef.current = worker;
-    return () => {
-      worker.terminate();
-      workerRef.current = null;
-    };
   }, []);
+
+  useEffect(() => {
+    initWorker();
+    return () => {
+      workerRef.current?.terminate();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [initWorker]);
+
+  const startWorkerTask = useCallback(() => {
+    setIsLoading(true);
+    setProgress(0);
+    setError(null);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    timeoutRef.current = setTimeout(() => {
+      setError('Translation timed out. Try splitting the document into smaller chunks.');
+      setIsLoading(false);
+      initWorker(); // Reboot the dead worker
+    }, WORKER_TIMEOUT_MS);
+  }, [initWorker]);
 
   // -------------------------------------------------------------------------
   // Public translate function
   // -------------------------------------------------------------------------
   const translate = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth') => {
     if (!workerRef.current) return;
-    setIsLoading(true);
-    setProgress(0);
-    setError(null);
+    startWorkerTask();
     workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode });
-  }, []);
+  }, [startWorkerTask]);
 
   // -------------------------------------------------------------------------
   // Public convertMath function
@@ -147,10 +175,11 @@ export function useBraille(): UseBrailleReturn {
         reject(new Error('Worker not ready'));
         return;
       }
+      startWorkerTask();
       convertMathResolvers.current.push(resolve);
       workerRef.current.postMessage({ type: 'CONVERT_MATH_ONLY', text, mathCode });
     });
-  }, []);
+  }, [startWorkerTask]);
 
   const backTranslateBrf = useCallback((brf: string, table = DEFAULT_TABLE): Promise<BackTranslateBrfResult> => {
     return new Promise((resolve, reject) => {
@@ -158,13 +187,11 @@ export function useBraille(): UseBrailleReturn {
         reject(new Error('Worker not ready'));
         return;
       }
+      startWorkerTask();
       pendingBackTranslateRef.current = { resolve, reject };
-      setIsLoading(true);
-      setProgress(0);
-      setError(null);
       workerRef.current.postMessage({ type: 'BACK_TRANSLATE', text: brf, table });
     });
-  }, []);
+  }, [startWorkerTask]);
 
   return {
     translate,
@@ -177,3 +204,4 @@ export function useBraille(): UseBrailleReturn {
     workerReady,
   };
 }
+

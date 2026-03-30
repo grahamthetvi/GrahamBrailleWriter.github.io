@@ -7,40 +7,58 @@
  */
 
 const BRIDGE_BASE = 'http://127.0.0.1:8080';
-const STATUS_POLL_INTERVAL_MS = 5_000;
+const BASE_POLL_INTERVAL_MS = 5_000;
+const BACKOFF_POLL_INTERVAL_MS = 30_000;
+const MAX_FAST_FAILURES = 3;
 
 // ---------------------------------------------------------------------------
 // Status polling
 // ---------------------------------------------------------------------------
 
 type StatusCallback = (connected: boolean) => void;
-let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Start polling the bridge /status endpoint every 5 seconds.
+ * Start polling the bridge /status endpoint.
+ * Uses exponential backoff to reduce battery/CPU usage if the bridge is offline.
  * Calls `onChange` whenever the connection state changes.
  * Returns a cleanup function.
  */
 export function startBridgeStatusPolling(onChange: StatusCallback): () => void {
   let lastState: boolean | null = null;
+  let failCount = 0;
+  let active = true;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   async function poll() {
+    if (!active) return;
+    
     const connected = await checkBridgeStatus();
     if (connected !== lastState) {
       lastState = connected;
       onChange(connected);
+    }
+
+    if (connected) {
+      failCount = 0;
+    } else {
+      failCount++;
+    }
+
+    const interval = failCount >= MAX_FAST_FAILURES ? BACKOFF_POLL_INTERVAL_MS : BASE_POLL_INTERVAL_MS;
+    
+    if (active) {
+      timeoutId = setTimeout(poll, interval);
     }
   }
 
   // Immediate first check
   poll();
 
-  pollTimer = setInterval(poll, STATUS_POLL_INTERVAL_MS);
-
   return () => {
-    if (pollTimer !== null) {
-      clearInterval(pollTimer);
-      pollTimer = null;
+    active = false;
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
     }
   };
 }
