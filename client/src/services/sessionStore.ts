@@ -51,7 +51,7 @@ export function cleanupOldSessions() {
 
 export function getRecoverableSessions(): SessionMetadata[] {
   return getSessionIndex()
-    .filter(s => !s.isExported)
+    .filter(s => !s.isExported && (s.preview || "").trim() !== "")
     .sort((a, b) => b.updatedAt - a.updatedAt); // Newest first
 }
 
@@ -61,13 +61,14 @@ export function getSessionText(id: string): string | null {
 
 export function saveSession(id: string, text: string) {
   const trimmed = text.trim();
-  const index = getSessionIndex();
-  let session = index.find(s => s.id === id);
   
-  if (trimmed === "" && !session) {
-    // Don't create new sessions for completely empty documents
+  if (trimmed === "") {
+    discardSession(id);
     return;
   }
+  
+  const index = getSessionIndex();
+  let session = index.find(s => s.id === id);
   
   const lines = trimmed.split(/\r?\n/);
   const firstLine = lines.length > 0 ? lines[0] : '';
