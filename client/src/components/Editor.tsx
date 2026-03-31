@@ -69,23 +69,44 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
     setValueFromBrailleSync: (text: string) => {
       const editor = editorRef.current;
       if (!editor) return;
-      const selections = editor.getSelections();
       isExternalUpdate.current = true;
 
       const model = editor.getModel();
       if (model) {
+        const selections = editor.getSelections();
+        const selectionOffsets = selections ? selections.map(s => {
+          return {
+            start: model.getOffsetAt(s.getStartPosition()),
+            end: model.getOffsetAt(s.getEndPosition()),
+            direction: s.getDirection()
+          };
+        }) : [];
+
         editor.executeEdits('braille-sync', [{
           range: model.getFullModelRange(),
           text: text,
           forceMoveMarkers: true
         }]);
         editor.pushUndoStop();
+
+        if (selectionOffsets.length > 0) {
+          const maxOffset = model.getValueLength();
+          const newSelections = selectionOffsets.map(off => {
+            const safeStart = Math.min(off.start, maxOffset);
+            const safeEnd = Math.min(off.end, maxOffset);
+            const startPos = model.getPositionAt(safeStart);
+            const endPos = model.getPositionAt(safeEnd);
+            
+            if (off.direction === monaco.SelectionDirection.RTL) {
+              return new monaco.Selection(endPos.lineNumber, endPos.column, startPos.lineNumber, startPos.column);
+            } else {
+              return new monaco.Selection(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column);
+            }
+          });
+          editor.setSelections(newSelections);
+        }
       } else {
         editor.setValue(text);
-      }
-
-      if (selections && selections.length > 0) {
-        editor.setSelections(selections);
       }
       isExternalUpdate.current = false;
     },

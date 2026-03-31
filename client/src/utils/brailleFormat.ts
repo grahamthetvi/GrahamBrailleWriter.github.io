@@ -283,6 +283,9 @@ function syncPlainLineToBrailleWrap(
     return canonicalSrc;
   }
 
+  const leadingSpace = canonicalSrc.match(/^\s*/)?.[0] ?? '';
+  const trailingSpace = canonicalSrc.match(/\s*$/)?.[0] ?? '';
+
   if (m === n && n > 0) {
     const lineParts: string[] = [];
     for (const pl of physical) {
@@ -292,7 +295,7 @@ function syncPlainLineToBrailleWrap(
       }
       lineParts.push(segParts.join(' ').trimEnd());
     }
-    return lineParts.join(SOFT_LINE_BREAK_CHAR);
+    return leadingSpace + lineParts.join(SOFT_LINE_BREAK_CHAR) + trailingSpace;
   }
 
   const lineWeights = physical.map(pl => {
@@ -313,7 +316,7 @@ function syncPlainLineToBrailleWrap(
     offset += take;
     outLines.push(slice.join(' '));
   }
-  return outLines.join(SOFT_LINE_BREAK_CHAR);
+  return leadingSpace + outLines.join(SOFT_LINE_BREAK_CHAR) + trailingSpace;
 }
 
 /**
