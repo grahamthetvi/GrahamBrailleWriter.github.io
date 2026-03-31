@@ -5,25 +5,26 @@ const AUTOSAVE_DEBOUNCE_MS = 1000;
 
 export function useAutosave(
   currentText: string,
-  onRestore: (restoredText: string) => void
+  enabled: boolean,
+  onBackupFound: (backupText: string) => void
 ) {
-  const [hasRestored, setHasRestored] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 1. Initial Load: Restore from backup once
+  // 1. Initial Load: Check for backup
   useEffect(() => {
-    if (!hasRestored) {
+    if (!hasChecked) {
       const backup = localStorage.getItem(AUTOSAVE_KEY);
       if (backup && backup.trim()) {
-        onRestore(backup);
+        onBackupFound(backup);
       }
-      setHasRestored(true);
+      setHasChecked(true);
     }
-  }, [hasRestored, onRestore]);
+  }, [hasChecked, onBackupFound]);
 
   // 2. Debounced save
   useEffect(() => {
-    if (!hasRestored) return;
+    if (!hasChecked || !enabled) return;
 
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
@@ -38,7 +39,7 @@ export function useAutosave(
         clearTimeout(timerRef.current);
       }
     };
-  }, [currentText, hasRestored]);
+  }, [currentText, hasChecked, enabled]);
 
   // Provide a manual clear method (e.g. if the user wants to trash their document)
   function clearAutosave() {

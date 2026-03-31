@@ -4,6 +4,7 @@ import { ChartGenerator } from './components/ChartGenerator';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
+import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille } from './hooks/useBraille';
@@ -202,13 +203,26 @@ export default function App() {
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
   // ── Autosave ────────────────────────────────────────────────────────────
-  useAutosave(inputText, (restored) => {
-    setInputText(restored);
-    setFileContent(restored);
-    if (restored.trim()) {
-      translate(restored, selectedTable, 'nemeth');
-    }
+  const [pendingRestoreText, setPendingRestoreText] = useState<string | null>(null);
+
+  useAutosave(inputText, pendingRestoreText === null, (backup) => {
+    setPendingRestoreText(backup);
   });
+
+  function handleRestoreSession() {
+    if (pendingRestoreText) {
+      setInputText(pendingRestoreText);
+      setFileContent(pendingRestoreText);
+      if (pendingRestoreText.trim()) {
+        translate(pendingRestoreText, selectedTable, 'nemeth');
+      }
+    }
+    setPendingRestoreText(null);
+  }
+
+  function handleDiscardSession() {
+    setPendingRestoreText(null);
+  }
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -918,6 +932,15 @@ export default function App() {
 
       {/* ── First-visit welcome / onboarding modal ────────────────────── */}
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} />}
+
+      {/* ── Session Restore Modal ───────────────────────────────────────── */}
+      {pendingRestoreText && (
+        <RestoreModal
+          backupText={pendingRestoreText}
+          onRestore={handleRestoreSession}
+          onDiscard={handleDiscardSession}
+        />
+      )}
     </div>
   );
 }
