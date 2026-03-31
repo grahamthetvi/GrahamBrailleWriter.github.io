@@ -130,6 +130,9 @@ body {
 }
 
 .toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.35rem 0.8rem;
   background: var(--bg-overlay);
   color: var(--text-primary);
@@ -138,12 +141,25 @@ body {
   font-size: 0.82rem;
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
 }
 
 .toolbar-btn:hover:not(:disabled) {
   border-color: var(--text-secondary);
   filter: brightness(1.15);
+}
+
+.tip-me-btn {
+  background: #FFDD00;
+  color: #000000;
+  font-weight: 600;
+  border: none;
+}
+
+.tip-me-btn:hover {
+  background: #FFCA00;
+  filter: none !important;
 }
 
 .toolbar-btn:focus-visible {

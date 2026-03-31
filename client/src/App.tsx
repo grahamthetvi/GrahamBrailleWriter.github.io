@@ -545,6 +545,18 @@ export default function App() {
             {themeLabels[theme]}
           </button>
 
+          {/* Tip Me / Buy Me a Coffee */}
+          <a
+            href="https://buymeacoffee.com/grahamthetvi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="toolbar-btn tip-me-btn"
+            title="Support Graham Braille Editor"
+            aria-label="Tip me on Buy Me a Coffee"
+          >
+            ☕ Tip Me
+          </a>
+
           {/* Help / re-open welcome guide */}
           <button
             className="toolbar-btn"
