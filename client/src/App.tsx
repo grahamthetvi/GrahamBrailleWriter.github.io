@@ -10,7 +10,7 @@ import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille } from './hooks/useBraille';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
-import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, type SessionMetadata } from './services/sessionStore';
+import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
 import { asciiToUnicodeBraille } from './utils/braille';
 import {
   formatBrfPages,
@@ -212,18 +212,24 @@ export default function App() {
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
   // ── Autosave ────────────────────────────────────────────────────────────
-  const [pendingSessions, setPendingSessions] = useState<SessionMetadata[]>([]);
+  const [drafts, setDrafts] = useState<SessionMetadata[]>([]);
+  const [showDrafts, setShowDrafts] = useState(false);
 
   useAutosave(
     sessionId,
     inputText,
-    pendingSessions.length === 0, // enabled
+    true, // always autosaving current session
     isSecondaryInstance,
     isChecking,
     (sessions) => {
-      setPendingSessions(sessions);
+      setDrafts(sessions);
     }
   );
+
+  function handleOpenDrafts() {
+    setDrafts(getRecoverableSessions());
+    setShowDrafts(true);
+  }
 
   function handleRestoreSession(id: string) {
     const text = getSessionText(id);
@@ -234,17 +240,16 @@ export default function App() {
         translate(text, selectedTable, 'nemeth');
       }
     }
-    setPendingSessions([]);
   }
 
   function handleDiscardSessionItem(id: string) {
     discardSession(id);
-    setPendingSessions(prev => prev.filter(s => s.id !== id));
+    setDrafts(prev => prev.filter(s => s.id !== id));
   }
 
   function handleDiscardAllSessions() {
     discardAllSessions();
-    setPendingSessions([]);
+    setDrafts([]);
   }
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -582,6 +587,16 @@ export default function App() {
             title="Cycle theme: dark → light → high contrast"
           >
             {themeLabels[theme]}
+          </button>
+
+          <button
+            className="toolbar-btn"
+            onClick={handleOpenDrafts}
+            disabled={isPerkinsMode}
+            title="View unsaved drafts from the last 30 days"
+            aria-label="View drafts"
+          >
+            Drafts {drafts.length > 0 && `(${drafts.length})`}
           </button>
 
           {/* Tip Me / Buy Me a Coffee */}
@@ -959,13 +974,14 @@ export default function App() {
       {/* ── First-visit welcome / onboarding modal ────────────────────── */}
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} isFirstVisit={!hasSeenWelcome} />}
 
-      {/* ── Session Restore Modal ───────────────────────────────────────── */}
-      {pendingSessions.length > 0 && !isChecking && (
+      {/* ── Drafts Modal ───────────────────────────────────────── */}
+      {showDrafts && !isChecking && (
         <RestoreModal
-          sessions={pendingSessions}
+          sessions={drafts}
           onRestore={handleRestoreSession}
           onDiscardItem={handleDiscardSessionItem}
           onDiscardAll={handleDiscardAllSessions}
+          onClose={() => setShowDrafts(false)}
         />
       )}
     </div>

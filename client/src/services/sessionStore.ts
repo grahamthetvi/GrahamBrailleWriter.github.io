@@ -60,10 +60,15 @@ export function getSessionText(id: string): string | null {
 }
 
 export function saveSession(id: string, text: string) {
+  const trimmed = text.trim();
   const index = getSessionIndex();
   let session = index.find(s => s.id === id);
   
-  const trimmed = text.trim();
+  if (trimmed === "" && !session) {
+    // Don't create new sessions for completely empty documents
+    return;
+  }
+  
   const lines = trimmed.split(/\r?\n/);
   const firstLine = lines.length > 0 ? lines[0] : '';
   const preview = firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;

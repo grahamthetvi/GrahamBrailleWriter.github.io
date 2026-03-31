@@ -6,9 +6,10 @@ interface RestoreModalProps {
   onRestore: (id: string) => void;
   onDiscardItem: (id: string) => void;
   onDiscardAll: () => void;
+  onClose: () => void;
 }
 
-export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll }: RestoreModalProps) {
+export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll, onClose }: RestoreModalProps) {
   const primaryBtnRef = useRef<HTMLButtonElement>(null);
 
   // Focus the primary button when opened
@@ -16,13 +17,11 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll 
     primaryBtnRef.current?.focus();
   }, []);
 
-  const singleSession = sessions.length === 1 ? sessions[0] : null;
-
   return (
     <div
       className="welcome-overlay"
-      aria-label="Restore previous session"
-      onClick={onDiscardAll}
+      aria-label="Drafts"
+      onClick={onClose}
     >
       <div
         className="welcome-modal"
@@ -33,105 +32,91 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll 
         style={{ maxWidth: '600px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
       >
         <header className="welcome-header">
-          <h2 id="restore-title">Restore Unsaved Documents?</h2>
+          <h2 id="restore-title">Drafts (Last 30 Days)</h2>
           <button
             className="welcome-close"
-            onClick={onDiscardAll}
-            aria-label="Discard all previous sessions"
+            onClick={onClose}
+            aria-label="Close"
           >
             ✕
           </button>
         </header>
 
         <div className="welcome-body" style={{ padding: '1rem 2rem', overflowY: 'auto' }}>
-          <p>Unsaved changes from previous sessions were found in your browser.</p>
-          
-          {singleSession ? (
-            <div
-              style={{
-                background: 'rgba(0,0,0,0.1)',
-                padding: '1rem',
-                borderRadius: '4px',
-                marginTop: '1rem',
-                marginBottom: '1rem',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                Last edited: {new Date(singleSession.updatedAt).toLocaleString()}
-              </div>
-              {singleSession.preview || <em>Empty document</em>}
-            </div>
+          {sessions.length === 0 ? (
+            <p>No unsaved drafts found.</p>
           ) : (
-            <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {sessions.map(session => (
-                <div
-                  key={session.id}
-                  style={{
-                    background: 'rgba(0,0,0,0.05)',
-                    padding: '1rem',
-                    borderRadius: '4px',
-                    border: '1px solid var(--border)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      Last edited: {new Date(session.updatedAt).toLocaleString()}
-                    </span>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button 
-                        className="welcome-btn-secondary" 
-                        onClick={() => onDiscardItem(session.id)}
-                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: 'transparent' }}
-                      >
-                        Discard
-                      </button>
-                      <button 
-                        className="welcome-btn-primary" 
-                        onClick={() => onRestore(session.id)}
-                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
-                      >
-                        Restore
-                      </button>
+            <>
+              <p>These documents were autosaved recently and haven't been downloaded or printed.</p>
+              <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {sessions.map(session => (
+                  <div
+                    key={session.id}
+                    style={{
+                      background: 'rgba(0,0,0,0.05)',
+                      padding: '1rem',
+                      borderRadius: '4px',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        Last edited: {new Date(session.updatedAt).toLocaleString()}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          className="welcome-btn-secondary" 
+                          onClick={() => onDiscardItem(session.id)}
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: 'transparent' }}
+                        >
+                          Discard
+                        </button>
+                        <button 
+                          className="welcome-btn-primary" 
+                          onClick={() => { onRestore(session.id); onClose(); }}
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {session.preview || <em>Empty document</em>}
                     </div>
                   </div>
-                  <div style={{ fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {session.preview || <em>Empty document</em>}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
-
-          {singleSession && <p>Would you like to restore this document?</p>}
         </div>
 
         <footer className="welcome-footer" style={{ gap: '1rem', padding: '1rem 2rem' }}>
-          <button
-            className="welcome-btn-secondary"
-            onClick={onDiscardAll}
-            style={{
-              background: 'transparent',
-              color: 'var(--text-primary)',
-            }}
-          >
-            {singleSession ? 'Discard' : 'Discard All'}
-          </button>
-          {singleSession && (
+          {sessions.length > 0 && (
             <button
-              ref={primaryBtnRef}
-              className="welcome-btn-primary"
-              onClick={() => onRestore(singleSession.id)}
+              className="welcome-btn-secondary"
+              onClick={() => {
+                if (window.confirm("Are you sure you want to discard all drafts?")) {
+                  onDiscardAll();
+                }
+              }}
+              style={{
+                background: 'transparent',
+                color: 'var(--text-primary)',
+              }}
             >
-              Restore
+              Discard All
             </button>
           )}
+          <button
+            ref={primaryBtnRef}
+            className="welcome-btn-primary"
+            onClick={onClose}
+          >
+            Close
+          </button>
         </footer>
       </div>
     </div>
