@@ -9,6 +9,8 @@ import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille } from './hooks/useBraille';
 import { useAutosave } from './hooks/useAutosave';
+import { useActiveInstances } from './hooks/useActiveInstances';
+import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, type SessionMetadata } from './services/sessionStore';
 import { asciiToUnicodeBraille } from './utils/braille';
 import {
   formatBrfPages,
@@ -90,14 +92,21 @@ const DEFAULT_PAGE_SETTINGS: PageSettings = {
 };
 
 export default function App() {
-  const [showWelcome, setShowWelcome] = useState(
-    () => !localStorage.getItem('graham-braille-welcome-seen')
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(
+    () => !!localStorage.getItem('graham-braille-welcome-seen')
   );
+  const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
   const [showChartGenerator, setShowChartGenerator] = useState(false);
   const editorRef = useRef<EditorHandle>(null);
 
+  const { isSecondaryInstance, isChecking } = useActiveInstances();
+  const [sessionId] = useState(() => generateSessionId());
+
   function handleWelcomeClose() {
-    localStorage.setItem('graham-braille-welcome-seen', '1');
+    if (!hasSeenWelcome) {
+      localStorage.setItem('graham-braille-welcome-seen', '1');
+      setHasSeenWelcome(true);
+    }
     setShowWelcome(false);
   }
 
@@ -203,25 +212,39 @@ export default function App() {
   const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
   // ── Autosave ────────────────────────────────────────────────────────────
-  const [pendingRestoreText, setPendingRestoreText] = useState<string | null>(null);
+  const [pendingSessions, setPendingSessions] = useState<SessionMetadata[]>([]);
 
-  useAutosave(inputText, pendingRestoreText === null, (backup) => {
-    setPendingRestoreText(backup);
-  });
+  useAutosave(
+    sessionId,
+    inputText,
+    pendingSessions.length === 0, // enabled
+    isSecondaryInstance,
+    isChecking,
+    (sessions) => {
+      setPendingSessions(sessions);
+    }
+  );
 
-  function handleRestoreSession() {
-    if (pendingRestoreText) {
-      setInputText(pendingRestoreText);
-      setFileContent(pendingRestoreText);
-      if (pendingRestoreText.trim()) {
-        translate(pendingRestoreText, selectedTable, 'nemeth');
+  function handleRestoreSession(id: string) {
+    const text = getSessionText(id);
+    if (text) {
+      setInputText(text);
+      setFileContent(text);
+      if (text.trim()) {
+        translate(text, selectedTable, 'nemeth');
       }
     }
-    setPendingRestoreText(null);
+    setPendingSessions([]);
   }
 
-  function handleDiscardSession() {
-    setPendingRestoreText(null);
+  function handleDiscardSessionItem(id: string) {
+    discardSession(id);
+    setPendingSessions(prev => prev.filter(s => s.id !== id));
+  }
+
+  function handleDiscardAllSessions() {
+    discardAllSessions();
+    setPendingSessions([]);
   }
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -272,6 +295,7 @@ export default function App() {
     a.download = defaultBrfDownloadFilename();
     a.click();
     URL.revokeObjectURL(url);
+    markExported(sessionId);
   }
 
   function handleDownloadPrintLayoutText() {
@@ -284,6 +308,7 @@ export default function App() {
     a.download = defaultPrintLayoutTextFilename();
     a.click();
     URL.revokeObjectURL(url);
+    markExported(sessionId);
   }
 
   // ── Paginated braille output ─────────────────────────────────────────────
@@ -573,12 +598,12 @@ export default function App() {
 
           {/* Help / re-open welcome guide */}
           <button
-            className="toolbar-btn"
+            className="toolbar-btn guide-btn"
             onClick={() => setShowWelcome(true)}
-            aria-label="Open help guide"
-            title="Open the Getting Started guide"
+            aria-label="Open User Guide"
+            title="Open the User Guide"
           >
-            ?
+            User Guide
           </button>
         </div>
 
@@ -592,6 +617,7 @@ export default function App() {
               compact
               viewPlusLeftPadCells={pageSettings.viewPlusLeftPadCells}
               viewPlusPaddingApplies={pageSettings.paperFormat === 'us-letter'}
+              onExport={() => markExported(sessionId)}
             />
           </div>
         )}
@@ -931,14 +957,15 @@ export default function App() {
       )}
 
       {/* ── First-visit welcome / onboarding modal ────────────────────── */}
-      {showWelcome && <WelcomeModal onClose={handleWelcomeClose} />}
+      {showWelcome && <WelcomeModal onClose={handleWelcomeClose} isFirstVisit={!hasSeenWelcome} />}
 
       {/* ── Session Restore Modal ───────────────────────────────────────── */}
-      {pendingRestoreText && (
+      {pendingSessions.length > 0 && !isChecking && (
         <RestoreModal
-          backupText={pendingRestoreText}
+          sessions={pendingSessions}
           onRestore={handleRestoreSession}
-          onDiscard={handleDiscardSession}
+          onDiscardItem={handleDiscardSessionItem}
+          onDiscardAll={handleDiscardAllSessions}
         />
       )}
     </div>

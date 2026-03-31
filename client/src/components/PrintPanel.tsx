@@ -16,6 +16,8 @@ interface PrintPanelProps {
   viewPlusLeftPadCells?: number;
   /** From Layout: true only when paper format is US Letter 8.5×11. */
   viewPlusPaddingApplies?: boolean;
+  /** Callback fired when a document is successfully sent to the printer. */
+  onExport?: () => void;
 }
 
 /**
@@ -30,6 +32,7 @@ export function PrintPanel({
   compact,
   viewPlusLeftPadCells = 0,
   viewPlusPaddingApplies = false,
+  onExport,
 }: PrintPanelProps) {
   const [printerName, setPrinterName] = useState('');
   const [selectedDriverId, setSelectedDriverId] = useState('generic');
@@ -99,6 +102,7 @@ export function PrintPanel({
         await printBrf(printerName.trim(), bytes);
       }
       setStatus('success');
+      onExport?.();
     } catch (err) {
       setStatus('error');
       setErrorMsg(err instanceof Error ? err.message : 'Unknown error');

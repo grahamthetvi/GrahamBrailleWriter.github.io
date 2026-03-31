@@ -162,6 +162,20 @@ body {
   filter: none !important;
 }
 
+.guide-btn {
+  background: #007bff;
+  color: #ffffff;
+  font-weight: 600;
+  border: 1px solid #0056b3;
+}
+
+.guide-btn:hover {
+  background: #0056b3;
+  border-color: #004085;
+  color: #ffffff;
+  filter: none !important;
+}
+
 .toolbar-btn:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring);
   outline-offset: 2px;

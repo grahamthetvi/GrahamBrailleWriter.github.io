@@ -1,37 +1,55 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  cleanupOldSessions,
+  getRecoverableSessions,
+  saveSession,
+  migrateLegacyAutosave,
+  type SessionMetadata,
+} from '../services/sessionStore';
 
-const AUTOSAVE_KEY = 'graham-braille-editor-text-backup';
 const AUTOSAVE_DEBOUNCE_MS = 1000;
 
 export function useAutosave(
+  sessionId: string,
   currentText: string,
   enabled: boolean,
-  onBackupFound: (backupText: string) => void
+  isSecondaryInstance: boolean,
+  isChecking: boolean,
+  onBackupsFound: (sessions: SessionMetadata[]) => void
 ) {
   const [hasChecked, setHasChecked] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Migrate any old version 1 string text backups into the new array structure 
+  useEffect(() => {
+    migrateLegacyAutosave();
+    cleanupOldSessions();
+  }, []);
+
   // 1. Initial Load: Check for backup
   useEffect(() => {
-    if (!hasChecked) {
-      const backup = localStorage.getItem(AUTOSAVE_KEY);
-      if (backup && backup.trim()) {
-        onBackupFound(backup);
+    if (isChecking || hasChecked) return;
+    
+    // If we're the second tab opened, act as a fresh document, don't show recover modal.
+    if (!isSecondaryInstance) {
+      const backups = getRecoverableSessions();
+      if (backups.length > 0) {
+        onBackupsFound(backups);
       }
-      setHasChecked(true);
     }
-  }, [hasChecked, onBackupFound]);
+    setHasChecked(true);
+  }, [hasChecked, isChecking, isSecondaryInstance, onBackupsFound]);
 
   // 2. Debounced save
   useEffect(() => {
-    if (!hasChecked || !enabled) return;
+    if (!hasChecked || isChecking || !enabled) return;
 
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
     }
 
     timerRef.current = setTimeout(() => {
-      localStorage.setItem(AUTOSAVE_KEY, currentText);
+      saveSession(sessionId, currentText);
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => {
@@ -39,12 +57,5 @@ export function useAutosave(
         clearTimeout(timerRef.current);
       }
     };
-  }, [currentText, hasChecked, enabled]);
-
-  // Provide a manual clear method (e.g. if the user wants to trash their document)
-  function clearAutosave() {
-    localStorage.removeItem(AUTOSAVE_KEY);
-  }
-
-  return { clearAutosave };
+  }, [currentText, sessionId, hasChecked, isChecking, enabled]);
 }

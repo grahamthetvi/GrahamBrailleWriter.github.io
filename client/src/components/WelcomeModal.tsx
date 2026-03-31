@@ -2,14 +2,15 @@ import { useEffect, useRef } from 'react';
 
 interface WelcomeModalProps {
   onClose: () => void;
+  isFirstVisit?: boolean;
 }
 
 /**
- * First-visit onboarding modal.
- * Shown once, dismissed state saved to localStorage ('graham-braille-welcome-seen').
- * Covers: page layout (presets, ViewPlus padding), Bridge app, and Math/LaTeX.
+ * First-visit onboarding modal and user guide.
+ * Shown once initially, and accessible later via the Help button.
+ * Covers: page layout, Bridge app, Math/LaTeX, downloading, perkins, and graphing.
  */
-export function WelcomeModal({ onClose }: WelcomeModalProps) {
+export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps) {
   const primaryBtnRef = useRef<HTMLButtonElement>(null);
 
   // Focus the "Get Started" button as soon as the modal opens.
@@ -43,7 +44,7 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
       >
         {/* ── Header ───────────────────────────────────────────────────── */}
         <header className="welcome-header">
-          <h2 id="welcome-title">Welcome to Graham Braille Editor</h2>
+          <h2 id="welcome-title">{isFirstVisit ? 'Welcome to Graham Braille Editor' : 'User Guide'}</h2>
           <button
             className="welcome-close"
             onClick={onClose}
@@ -160,6 +161,39 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
             </div>
           </section>
 
+          {/* 4. Downloading */}
+          <section className="welcome-section">
+            <div className="welcome-section-icon" aria-hidden="true">💾</div>
+            <div>
+              <h3>Downloading BRF &amp; Print Layout</h3>
+              <p>
+                When your translation is ready, click <strong>Download BRF</strong> to output standard <code>.brf</code> files formatted directly to your selected page layout settings. If you need a perfectly matched plain text layout to share visually, click <strong>Download print layout</strong>. This guarantees your print document wraps identically to the braille version.
+              </p>
+            </div>
+          </section>
+
+          {/* 5. Perkins Viewer */}
+          <section className="welcome-section">
+            <div className="welcome-section-icon" aria-hidden="true">🎹</div>
+            <div>
+              <h3>Perkins Viewer</h3>
+              <p>
+                Switch to the <strong>🎹 Perkins Viewer</strong> to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document.
+              </p>
+            </div>
+          </section>
+
+          {/* 6. Graphing */}
+          <section className="welcome-section">
+            <div className="welcome-section-icon" aria-hidden="true">📊</div>
+            <div>
+              <h3>Graphing (Coming Soon)</h3>
+              <p>
+                Click <strong>📊 Create Chart</strong> to experiment with data-driven tactile charts. Note: <em>This feature is currently under active development and doesn't fully work yet.</em> Check back for fully realized accessible data plotting!
+              </p>
+            </div>
+          </section>
+
         </div>
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
@@ -181,7 +215,7 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
             className="welcome-btn-primary"
             onClick={onClose}
           >
-            Get Started
+            {isFirstVisit ? 'Get Started' : 'Close Guide'}
           </button>
         </footer>
       </div>
