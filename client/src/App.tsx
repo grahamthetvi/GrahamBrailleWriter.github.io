@@ -7,7 +7,7 @@ import { WelcomeModal } from './components/WelcomeModal';
 import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
-import { useBraille } from './hooks/useBraille';
+import { useBraille, type MathCode } from './hooks/useBraille';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
 import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
@@ -81,6 +81,18 @@ function inferPaperFormat(cellsPerRow: number, linesPerPage: number): PaperForma
   return 'custom';
 }
 
+const MATH_CODE_STORAGE_KEY = 'graham-math-code';
+
+function readStoredMathCode(): MathCode {
+  try {
+    const v = localStorage.getItem(MATH_CODE_STORAGE_KEY);
+    if (v === 'ueb' || v === 'nemeth') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'nemeth';
+}
+
 const DEFAULT_PAGE_SETTINGS: PageSettings = {
   cellsPerRow: 40,
   linesPerPage: 25,
@@ -112,6 +124,7 @@ export default function App() {
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [selectedTable, setSelectedTable] = useState(DEFAULT_TABLE);
+  const [mathCode, setMathCode] = useState<MathCode>(() => readStoredMathCode());
 
   // ── Perkins Viewer ───────────────────────────────────────────────────────
   const [isPerkinsMode, setIsPerkinsMode] = useState(false);
@@ -188,22 +201,28 @@ export default function App() {
     return stopPolling;
   }, [useWebUSB]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(MATH_CODE_STORAGE_KEY, mathCode);
+    } catch {
+      /* ignore */
+    }
+  }, [mathCode]);
+
   // ── Text change handler (called by Editor with debounced value) ──────────
   const handleTextChange = useCallback((text: string) => {
     setInputText(text);
     if (text.trim()) {
-      translate(text, selectedTable, 'nemeth');
+      translate(text, selectedTable, mathCode);
     }
-  }, [translate, selectedTable]);
+  }, [translate, selectedTable, mathCode]);
 
-  // ── Re-translate when table changes ─────────────────────────────────────
-  const prevTableRef = useRef(selectedTable);
+  // ── Re-translate when literary table or math code changes (not on every keystroke) ──
   useEffect(() => {
-    if ((selectedTable !== prevTableRef.current) && inputText.trim()) {
-      prevTableRef.current = selectedTable;
-      translate(inputText, selectedTable, 'nemeth');
-    }
-  }, [selectedTable, inputText, translate]);
+    const text = inputTextRef.current;
+    if (!text.trim()) return;
+    translate(text, selectedTable, mathCode);
+  }, [selectedTable, mathCode, translate]);
 
   // ── File import (plain text or .brf) ─────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -237,7 +256,7 @@ export default function App() {
       setInputText(text);
       setFileContent(text);
       if (text.trim()) {
-        translate(text, selectedTable, 'nemeth');
+        translate(text, selectedTable, mathCode);
       }
     }
   }
@@ -272,7 +291,7 @@ export default function App() {
       } else {
         setInputText(raw);
         setFileContent(raw);
-        translate(raw, selectedTable, 'nemeth');
+        translate(raw, selectedTable, mathCode);
       }
     };
     reader.readAsText(file, 'utf-8');
@@ -963,6 +982,8 @@ export default function App() {
       {/* ── Chart Generator Modal ──────────────────────────────────────────── */}
       {showChartGenerator && (
         <ChartGenerator
+          mathCode={mathCode}
+          onMathCodeChange={setMathCode}
           onClose={() => setShowChartGenerator(false)}
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);

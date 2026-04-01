@@ -11,8 +11,12 @@ import {
     parseCsvRows,
     parseCommaSeparatedNumbers,
 } from '../types/chart';
+import type { MathCode } from '../hooks/useBraille';
 
 interface ChartGeneratorProps {
+    /** Document-wide math mode for LaTeX (`$$…$$`, `\\(…\\)`); persisted in the app. */
+    mathCode: MathCode;
+    onMathCodeChange: (code: MathCode) => void;
     onInsert: (text: string) => void;
     onClose: () => void;
 }
@@ -60,7 +64,12 @@ function buildSpecFromState(
     return spec;
 }
 
-export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
+export function ChartGenerator({
+    mathCode,
+    onMathCodeChange,
+    onInsert,
+    onClose,
+}: ChartGeneratorProps) {
     const [step, setStep] = useState(0);
     const [chartType, setChartType] = useState<ChartKind>('line');
     const [cellsWidth, setCellsWidth] = useState(30);
@@ -473,6 +482,71 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
                                     />
                                 </div>
                             </div>
+                            <fieldset
+                                style={{
+                                    marginTop: '16px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '4px',
+                                    padding: '12px',
+                                }}
+                            >
+                                <legend style={{ fontSize: '0.85rem', padding: '0 6px' }}>
+                                    LaTeX math (Nemeth vs UEB)
+                                </legend>
+                                <p
+                                    style={{
+                                        fontSize: '0.82rem',
+                                        marginTop: 0,
+                                        marginBottom: '10px',
+                                        opacity: 0.9,
+                                    }}
+                                >
+                                    Applies when the editor translates <code>$$…$$</code> and{' '}
+                                    <code>{`\\(`}…{`\\)`}</code>. This choice is saved for the app and
+                                    used for the whole document. The chart summary above the graphic is
+                                    plain text and uses your literary table like other prose.
+                                </p>
+                                <div role="radiogroup" aria-label="Math braille code for LaTeX">
+                                    <label
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '8px',
+                                            marginBottom: '8px',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="chart-math-code"
+                                            checked={mathCode === 'nemeth'}
+                                            onChange={() => onMathCodeChange('nemeth')}
+                                        />
+                                        <span>
+                                            <strong>Nemeth</strong> — US math notation (often wrapped for
+                                            UEB literary context)
+                                        </span>
+                                    </label>
+                                    <label
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '8px',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="chart-math-code"
+                                            checked={mathCode === 'ueb'}
+                                            onChange={() => onMathCodeChange('ueb')}
+                                        />
+                                        <span>
+                                            <strong>UEB math</strong> — Unified English Braille math
+                                        </span>
+                                    </label>
+                                </div>
+                            </fieldset>
                         </div>
                     )}
 
@@ -530,6 +604,9 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
                             <p style={{ fontSize: '0.88rem', opacity: 0.9, marginTop: 0 }}>
                                 Plain English below will appear above the tactile chart and will be
                                 translated with your literary table like the rest of the document.
+                                LaTeX math in the file uses{' '}
+                                <strong>{mathCode === 'nemeth' ? 'Nemeth' : 'UEB math'}</strong> (set on
+                                step 2).
                             </p>
                             {reviewValidation.ok && reviewSummaryPreview ? (
                                 <pre
