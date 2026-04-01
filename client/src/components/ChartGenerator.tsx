@@ -19,6 +19,21 @@ interface ChartGeneratorProps {
 
 const STEPS = ['Data', 'Chart type and grid', 'Labels', 'Review'] as const;
 
+/** When delimiter-based pairing fails: first two numbers per line (e.g. tab- or space-separated). */
+function tryPairsFromNumericTokens(lines: string[]): { x: number; y: number }[] | null {
+    const numRe = /-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi;
+    const pairs: { x: number; y: number }[] = [];
+    for (const line of lines) {
+        const matches = [...line.matchAll(numRe)];
+        if (matches.length < 2) return null;
+        const x = parseFloat(matches[0][0]);
+        const y = parseFloat(matches[1][0]);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+        pairs.push({ x, y });
+    }
+    return pairs;
+}
+
 function buildSpecFromState(
     kind: ChartKind,
     xValues: number[],
@@ -176,10 +191,21 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
             return;
         }
 
-        const { values, rowCount } = parseCsvRows(csvPaste);
+        const tokenPairs = tryPairsFromNumericTokens(lines);
+        if (tokenPairs && tokenPairs.length === lines.length) {
+            setDataXInput(tokenPairs.map((p) => String(p.x)).join(', '));
+            setDataYInput(tokenPairs.map((p) => String(p.y)).join(', '));
+            setFieldErrors([]);
+            announce(`${tokenPairs.length} points loaded (X, Y from each line).`);
+            setCsvPaste('');
+            return;
+        }
+
+        const { values, rowCount, error } = parseCsvRows(csvPaste);
         if (values.length === 0) {
-            setFieldErrors(['No numbers found in pasted text.']);
-            announce('No numbers found in pasted text.');
+            const msg = error ?? 'No numbers found in pasted text.';
+            setFieldErrors([msg]);
+            announce(msg);
             return;
         }
         setDataXInput('');

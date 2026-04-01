@@ -2,8 +2,9 @@
  * chartBraille.ts
  * Generates ASCII BRF strings representing data charts mapped to a 6-dot braille cell grid.
  *
- * Phase C (future): optional axis ticks/labels with compact numeric vs vertical-word encoding;
- * see chartAdvanced.ts. Chart label numeric-indicator policy is a product convention, not enforced here.
+ * Axis ticks: short hash marks at min / mid / max on each axis (numeric labels stay in plain-text summary).
+ *
+ * Line charts connect points in ascending X order (ties broken by Y). Bar charts draw columns in that same order.
  */
 
 import type { ChartSpec } from '../types/chart';
@@ -119,6 +120,84 @@ function scaleXtoPixel(x: number, xMin: number, xMax: number, drawW: number): nu
     return 1 + Math.round(((x - xMin) / (xMax - xMin)) * drawW);
 }
 
+/** Map data Y to plot pixel row (inclusive of drawable band y ∈ [1, canvasHeight − 2]). */
+function scaleYValueToPixel(
+    val: number,
+    yMin: number,
+    yMax: number,
+    drawH: number,
+    canvasHeight: number
+): number {
+    if (yMax === yMin) {
+        return canvasHeight - 2 - Math.floor(drawH / 2);
+    }
+    const yNorm = (val - yMin) / (yMax - yMin);
+    return canvasHeight - 2 - Math.round(yNorm * drawH);
+}
+
+function dedupeNearbyPixels(positions: number[], minSep: number): number[] {
+    const sorted = [...positions].sort((a, b) => a - b);
+    const out: number[] = [];
+    for (const p of sorted) {
+        if (out.length === 0 || p - out[out.length - 1] >= minSep) {
+            out.push(p);
+        }
+    }
+    return out;
+}
+
+/** Hash marks inward from the L-shaped axes (does not add numeric glyphs). */
+function drawAxisTicks(
+    canvas: GridCanvas,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number,
+    drawW: number,
+    drawH: number
+): void {
+    const h = canvas.height;
+    const w = canvas.width;
+    const tickLen = Math.min(3, Math.max(2, Math.floor(Math.min(w, h) / 14)));
+
+    const xPx = dedupeNearbyPixels(
+        [
+            scaleXtoPixel(minX, minX, maxX, drawW),
+            scaleXtoPixel((minX + maxX) / 2, minX, maxX, drawW),
+            scaleXtoPixel(maxX, minX, maxX, drawW),
+        ],
+        2
+    );
+
+    for (const tx of xPx) {
+        const x = Math.max(1, Math.min(w - 2, tx));
+        const yBottom = h - 2;
+        const yTop = Math.max(1, yBottom - tickLen);
+        canvas.drawLine(x, yBottom, x, yTop);
+    }
+
+    const yPy = dedupeNearbyPixels(
+        [
+            scaleYValueToPixel(maxY, minY, maxY, drawH, h),
+            scaleYValueToPixel((minY + maxY) / 2, minY, maxY, drawH, h),
+            scaleYValueToPixel(minY, minY, maxY, drawH, h),
+        ],
+        2
+    );
+
+    for (const ty of yPy) {
+        const y = Math.max(1, Math.min(h - 2, ty));
+        const xLeft = 1;
+        const xRight = Math.min(w - 2, xLeft + tickLen);
+        canvas.drawLine(xLeft, y, xRight, y);
+    }
+}
+
+function drawChartAxes(canvas: GridCanvas): void {
+    canvas.drawLine(0, 0, 0, canvas.height - 1);
+    canvas.drawLine(0, canvas.height - 1, canvas.width - 1, canvas.height - 1);
+}
+
 /** Full chart BRF from a validated ChartSpec (single series). */
 export function generateChartBrf(spec: ChartSpec): string {
     if (spec.kind === 'line') {
@@ -186,10 +265,6 @@ export function generateLineChart(
     cellsHeight = Math.max(2, cellsHeight);
 
     const canvas = new GridCanvas(cellsWidth, cellsHeight);
-    
-    // Y-axis (left edge), X-axis (bottom edge)
-    canvas.drawLine(0, 0, 0, canvas.height - 1);
-    canvas.drawLine(0, canvas.height - 1, canvas.width - 1, canvas.height - 1);
 
     const { min: minYield, max: maxYield } = domainMinMax(yData);
     const { min: minX, max: maxX } = domainMinMax(xData);
@@ -197,10 +272,15 @@ export function generateLineChart(
     const drawW = canvas.width - 2;
     const drawH = canvas.height - 2;
 
-    const points = yData.map((val, i) => {
-        const x = scaleXtoPixel(xData[i], minX, maxX, drawW);
-        const yNorm = (val - minYield) / (maxYield - minYield);
-        const y = (canvas.height - 2) - Math.round(yNorm * drawH);
+    drawChartAxes(canvas);
+    drawAxisTicks(canvas, minX, maxX, minYield, maxYield, drawW, drawH);
+
+    const pairs = xData.map((x, i) => ({ x, y: yData[i] }));
+    pairs.sort((a, b) => (a.x !== b.x ? a.x - b.x : a.y - b.y));
+
+    const points = pairs.map(({ x: xv, y: val }) => {
+        const x = scaleXtoPixel(xv, minX, maxX, drawW);
+        const y = scaleYValueToPixel(val, minYield, maxYield, drawH, canvas.height);
         return { x, y };
     });
 
@@ -222,29 +302,34 @@ export function generateBarChart(
     cellsHeight = Math.max(2, cellsHeight);
 
     const canvas = new GridCanvas(cellsWidth, cellsHeight);
-    
-    // Y-axis (left edge), X-axis (bottom edge)
-    canvas.drawLine(0, 0, 0, canvas.height - 1);
-    canvas.drawLine(0, canvas.height - 1, canvas.width - 1, canvas.height - 1);
 
     const maxYield = Math.max(...yData, 1);
+    const minYBar = 0;
+    const maxYBar = maxYield;
 
     const drawW = canvas.width - 2;
     const drawH = canvas.height - 2;
 
     const { min: minX, max: maxX } = domainMinMax(xData);
 
-    const xPixels = xData.map((xv) => scaleXtoPixel(xv, minX, maxX, drawW));
+    drawChartAxes(canvas);
+    drawAxisTicks(canvas, minX, maxX, minYBar, maxYBar, drawW, drawH);
+
+    const pairs = xData.map((x, i) => ({ x, y: yData[i] }));
+    pairs.sort((a, b) => (a.x !== b.x ? a.x - b.x : a.y - b.y));
+
+    const xPixels = pairs.map((p) => scaleXtoPixel(p.x, minX, maxX, drawW));
     const sortedPx = [...xPixels].sort((a, b) => a - b);
     let minGap = drawW;
     for (let i = 1; i < sortedPx.length; i++) {
         minGap = Math.min(minGap, sortedPx[i] - sortedPx[i - 1]);
     }
     if (sortedPx.length <= 1) minGap = drawW;
-    const barWidth = Math.max(1, Math.floor(Math.min(drawW / (2 * yData.length), minGap * 0.45)));
+    const n = pairs.length;
+    const barWidth = Math.max(1, Math.floor(Math.min(drawW / (2 * n), minGap * 0.45)));
 
-    yData.forEach((val, i) => {
-        const cx = xPixels[i];
+    pairs.forEach(({ x: xv, y: val }) => {
+        const cx = scaleXtoPixel(xv, minX, maxX, drawW);
         const xStart = Math.max(1, cx - Math.floor(barWidth / 2));
         const xEnd = Math.min(canvas.width - 2, xStart + barWidth - 1);
         const yNorm = Math.max(0, val / maxYield);

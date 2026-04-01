@@ -14,7 +14,7 @@ export interface ChartSpec {
   xValues: number[];
   cellsWidth: number;
   cellsHeight: number;
-  /** Optional labels for accessibility / summary text (not yet drawn in bitmap Phase A–B). */
+  /** Optional labels for the plain-text summary (numeric axis labels are not drawn in the tactile bitmap). */
   title?: string;
   xAxisLabel?: string;
   yAxisLabel?: string;
@@ -76,11 +76,35 @@ export function validateChartSpec(spec: ChartSpec): ChartValidationResult {
   return { ok: errors.length === 0, errors };
 }
 
+const CSV_Y_ONLY_AMBIGUOUS =
+  'That paste looks like multiple columns. Use one Y value per line, one line of comma-separated Y values, or two columns (X, Y) on every line.';
+
+function finiteNumbersInRow(cells: string[]): number[] {
+  const out: number[] = [];
+  for (const c of cells) {
+    if (c === '') continue;
+    const n = parseFloat(c);
+    if (Number.isFinite(n)) out.push(n);
+  }
+  return out;
+}
+
 /**
- * Parse CSV-ish paste: rows of numbers; first column used as Y if one column,
- * or first row as header skipped if non-numeric. Keeps numbers in row order (row-major).
+ * Parse CSV-ish paste for **Y-only** series: safe cases only.
+ *
+ * - One non-empty line: all numbers on that line are Y values (in order).
+ * - Several lines: each line must contribute exactly one number (Y), or the paste is rejected
+ *   so we do not flatten multi-column grids into a single series by mistake.
+ *
+ * Optional header row is skipped when the first row is not all-numeric.
+ * On ambiguous multi-column data, returns `values: []` and `error` set.
  */
-export function parseCsvRows(csv: string): { values: number[]; rowCount: number; columnCount: number } {
+export function parseCsvRows(csv: string): {
+  values: number[];
+  rowCount: number;
+  columnCount: number;
+  error?: string;
+} {
   const lines = csv
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -90,9 +114,7 @@ export function parseCsvRows(csv: string): { values: number[]; rowCount: number;
     return { values: [], rowCount: 0, columnCount: 0 };
   }
 
-  const rows = lines.map((line) =>
-    line.split(/[,;\t]/).map((c) => c.trim())
-  );
+  const rows = lines.map((line) => line.split(/[,;\t]/).map((c) => c.trim()));
   const columnCount = Math.max(...rows.map((r) => r.length));
 
   const allNumeric = (cells: string[]) =>
@@ -103,20 +125,40 @@ export function parseCsvRows(csv: string): { values: number[]; rowCount: number;
     startRow = 1;
   }
 
-  const values: number[] = [];
-  for (let r = startRow; r < rows.length; r++) {
-    const cells = rows[r];
-    for (let c = 0; c < cells.length; c++) {
-      if (cells[c] === '') continue;
-      const n = parseFloat(cells[c]);
-      if (!Number.isNaN(n)) values.push(n);
-    }
+  const dataRows = rows.slice(startRow);
+  if (dataRows.length === 0) {
+    return { values: [], rowCount: 0, columnCount };
+  }
+
+  const numsPerRow = dataRows.map((cells) => finiteNumbersInRow(cells));
+
+  if (numsPerRow.some((nr) => nr.length === 0)) {
+    return { values: [], rowCount: dataRows.length, columnCount, error: 'No numeric values found in pasted text.' };
+  }
+
+  if (dataRows.length === 1) {
+    return {
+      values: numsPerRow[0],
+      rowCount: 1,
+      columnCount,
+    };
+  }
+
+  const lengths = numsPerRow.map((nr) => nr.length);
+  const uniform = lengths.every((l) => l === lengths[0]);
+  if (uniform && lengths[0] === 1) {
+    return {
+      values: numsPerRow.map((nr) => nr[0]),
+      rowCount: dataRows.length,
+      columnCount,
+    };
   }
 
   return {
-    values,
-    rowCount: rows.length - startRow,
+    values: [],
+    rowCount: dataRows.length,
     columnCount,
+    error: CSV_Y_ONLY_AMBIGUOUS,
   };
 }
 

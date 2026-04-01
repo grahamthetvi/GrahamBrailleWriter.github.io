@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateChartSpec, parseCsvRows, parseCommaSeparatedNumbers, CHART_LIMITS } from './chart';
-import { buildChartSummaryPlainText } from '../utils/chartBraille';
+import { buildChartSummaryPlainText, generateLineChart, generateBarChart } from '../utils/chartBraille';
 import type { ChartSpec } from './chart';
 
 function baseSpec(over: Partial<ChartSpec> = {}): ChartSpec {
@@ -59,14 +59,42 @@ describe('parseCommaSeparatedNumbers', () => {
 
 describe('parseCsvRows', () => {
     it('parses comma-separated line', () => {
-        const { values, rowCount } = parseCsvRows('1, 2, 3');
+        const { values, rowCount, error } = parseCsvRows('1, 2, 3');
+        expect(error).toBeUndefined();
         expect(values).toEqual([1, 2, 3]);
         expect(rowCount).toBe(1);
     });
 
-    it('skips header row when non-numeric', () => {
-        const { values } = parseCsvRows('x,y\n1,2\n3,4');
-        expect(values.length).toBeGreaterThan(0);
+    it('parses one number per line as Y series', () => {
+        const { values, error } = parseCsvRows('1\n2\n3');
+        expect(error).toBeUndefined();
+        expect(values).toEqual([1, 2, 3]);
+    });
+
+    it('does not flatten multi-row multi-column grids into one series', () => {
+        const { values, error } = parseCsvRows('x,y\n1,2\n3,4');
+        expect(values).toEqual([]);
+        expect(error).toBeDefined();
+    });
+});
+
+describe('generateLineChart', () => {
+    it('connects segments in ascending X order regardless of input order', () => {
+        const w = 12;
+        const h = 10;
+        const unsorted = generateLineChart([2, 0, 1], [1, 2, 3], w, h);
+        const sorted = generateLineChart([0, 1, 2], [2, 3, 1], w, h);
+        expect(unsorted).toBe(sorted);
+    });
+});
+
+describe('generateBarChart', () => {
+    it('matches after permuting (x,y) pairs when sorted order is the same', () => {
+        const w = 14;
+        const h = 10;
+        const a = generateBarChart([2, 0, 1], [10, 20, 30], w, h);
+        const b = generateBarChart([0, 1, 2], [20, 30, 10], w, h);
+        expect(a).toBe(b);
     });
 });
 
