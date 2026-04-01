@@ -1,0 +1,18 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsEditItemEquationGroup: Adw.PreferencesGroup {
+  title: _("Equation");
+
+  Adw.EntryRow equation {
+    max-width-chars: 25;
+    title: _("Y =");
+    notify::text => $on_equation_change();
+    apply => $on_equation_apply();
+  }
+
+  Adw.ButtonRow simplify {
+    title: _("Simplify");
+    activated => $on_simplify();
+  }
+}

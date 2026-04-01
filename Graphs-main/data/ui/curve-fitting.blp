@@ -1,0 +1,263 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsCurveFittingDialog: Adw.Dialog {
+  content-width: 1000;
+  content-height: 600;
+  width-request: 360;
+  height-request: 100;
+  focus-widget: confirm_button;
+
+  ShortcutController {
+    Shortcut {
+      trigger: "F9";
+      action: "action(win.toggle_sidebar)";
+    }
+  }
+
+  Adw.Breakpoint {
+    condition ("max-width: 675sp")
+
+    setters {
+      split_view.collapsed: true;
+    }
+  }
+
+  Adw.Breakpoint {
+    condition ("max-height: 500sp")
+
+    setters {
+      residuals_container.height-request: 150;
+    }
+  }
+
+  child: Adw.ToolbarView {
+    top-bar-style: flat;
+
+    content: Adw.OverlaySplitView split_view {
+      enable-show-gesture: bind split_view.collapsed;
+      enable-hide-gesture: bind split_view.collapsed;
+
+      sidebar: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          title-widget: Adw.WindowTitle {
+            title: _("Curve Fitting");
+          };
+
+          [end]
+          MenuButton {
+            icon-name: "view-more-symbolic";
+            tooltip-text: _("Open Curve Fitting Menu");
+            primary: true;
+            menu-model: fitting_menu;
+          }
+        }
+
+        content: Box {
+          orientation: vertical;
+
+          ScrolledWindow {
+            vexpand: true;
+            width-request: 280;
+            hscrollbar-policy: never;
+
+            Box {
+              orientation: vertical;
+              margin-start: 12;
+              margin-end: 12;
+              margin-bottom: 12;
+              margin-top: 12;
+              spacing: 12;
+
+              Adw.PreferencesGroup {
+                Adw.ComboRow equation {
+                  title: _("Equation");
+
+                  model: StringList {
+                    strings [
+                      C_("regression-type", "Linear"),
+                      C_("regression-type", "Quadratic"),
+                      C_("regression-type", "Exponential"),
+                      C_("regression-type", "Power Law"),
+                      C_("regression-type", "Logarithmic"),
+                      C_("regression-type", "Sigmoid Logistic"),
+                      C_("regression-type", "Gaussian"),
+                      C_("regression-type", "Custom"),
+                    ]
+                  };
+                }
+
+                Adw.EntryRow custom_equation {
+                  visible: false;
+                  title: _("Y =");
+                }
+              }
+
+              Box fitting_params_box {
+                hexpand: true;
+                spacing: 12;
+                orientation: vertical;
+              }
+
+              ScrolledWindow {
+                hexpand: true;
+                hscrollbar-policy: automatic;
+                vscrollbar-policy: never;
+                propagate-natural-height: true;
+
+                TextView text_view {
+                  left-margin: 12;
+                  right-margin: 12;
+                  top-margin: 12;
+                  bottom-margin: 12;
+                  halign: fill;
+                  editable: false;
+
+                  styles [
+                    "card",
+                  ]
+                }
+              }
+            }
+          }
+        };
+
+        [bottom]
+        Adw.Clamp {
+          maximum-size: 400;
+
+          child: Box {
+            margin-start: 12;
+            margin-end: 12;
+            margin-top: 6;
+            margin-bottom: 12;
+
+            Button confirm_button {
+              hexpand: true;
+              label: _("Add Fit to Data");
+              clicked => $on_accept();
+
+              styles [
+                "pill",
+                "suggested-action",
+              ]
+            }
+          };
+        }
+      };
+
+      content: Adw.ToolbarView {
+        styles [
+          "system-canvas-view",
+        ]
+
+        [top]
+        Adw.HeaderBar {
+          show-title: false;
+
+          ToggleButton show_sidebar_button {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Toggle Sidebar");
+            active: bind split_view.show-sidebar bidirectional;
+            visible: bind split_view.collapsed;
+          }
+        }
+
+        content: Adw.ToastOverlay toast_overlay {
+          focusable: true;
+          hexpand: true;
+
+          child: Box {
+            orientation: vertical;
+            hexpand: true;
+            vexpand: true;
+
+            Adw.Bin canvas_container {
+              hexpand: true;
+              vexpand: true;
+
+              Adw.StatusPage {
+                visible: false;
+                icon-name: "dialog-error-symbolic";
+                title: _("Canvas Failed to Load");
+              }
+            }
+
+            Adw.Bin residuals_container {
+              hexpand: true;
+              vexpand: false;
+              height-request: 200;
+              visible: false;
+            }
+          };
+        };
+      };
+    };
+  };
+}
+
+menu fitting_menu {
+  section {
+    label: _("Optimization Method");
+
+    item {
+      // Translators: see https://help.gnome.org/graphs/curve_fitting.html#algorithms
+      label: C_("optimization", "Levenberg-Marquardt");
+      action: "win.optimization";
+      target: "lm";
+    }
+
+    item {
+      // Translators: see https://help.gnome.org/graphs/curve_fitting.html#algorithms, NOTE: This is a reflective version of the Trust-region algorithm.
+      label: C_("optimization", "Trust Region Reflective");
+      action: "win.optimization";
+      target: "trf";
+    }
+
+    item {
+      // Translators: see https://help.gnome.org/graphs/curve_fitting.html#algorithms
+      label: C_("optimization", "Dogbox");
+      action: "win.optimization";
+      target: "dogbox";
+    }
+  }
+
+  section {
+    label: _("Confidence Bounds");
+
+    item {
+      label: C_("confidence", "None");
+      action: "win.confidence";
+      target: "none";
+    }
+
+    item {
+      /* xgettext: no-c-format */
+      label: C_("confidence", "1σ: 68% Confidence");
+      action: "win.confidence";
+      target: "1std";
+    }
+
+    item {
+      /* xgettext: no-c-format */
+      label: C_("confidence", "2σ: 95% Confidence");
+      action: "win.confidence";
+      target: "2std";
+    }
+
+    item {
+      /* xgettext: no-c-format */
+      label: C_("confidence", "3σ: 99.7% Confidence");
+      action: "win.confidence";
+      target: "3std";
+    }
+  }
+
+  section {
+    item {
+      label: _("Show Residuals");
+      action: "win.show-residuals";
+    }
+  }
+}

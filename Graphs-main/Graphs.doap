@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:gnome="http://api.gnome.org/doap-extensions#"
+         xmlns="http://usefulinc.com/ns/doap#">
+
+  <name>Graphs</name>
+  <shortdesc xml:lang="en">Plot and manipulate data</shortdesc>
+  <homepage rdf:resource="https://apps.gnome.org/Graphs/" />
+  <download-page rdf:resource="https://flathub.org/apps/details/se.sjoerd.Graphs" />
+  <bug-database rdf:resource="https://gitlab.gnome.org/World/graphs/-/issues" />
+
+  <programming-language>Python</programming-language>
+  <programming-language>Vala</programming-language>
+
+  <platform>GTK 4</platform>
+  <platform>Libadwaita</platform>
+
+  <maintainer>
+    <foaf:Person>
+      <foaf:name>Sjoerd Stendahl</foaf:name>
+      <gnome:userid>sstendahl</gnome:userid>
+      <foaf:mbox rdf:resource="mailto:sstendahl@gnome.org" />
+      <foaf:account>
+        <foaf:OnlineAccount>
+          <foaf:accountServiceHomepage rdf:resource="https://github.com"/>
+          <foaf:accountName>sstendahl</foaf:accountName>
+        </foaf:OnlineAccount>
+      </foaf:account>
+      <foaf:account>
+        <foaf:OnlineAccount>
+          <foaf:accountServiceHomepage rdf:resource="https://gitlab.gnome.org"/>
+          <foaf:accountName>sstendahl</foaf:accountName>
+        </foaf:OnlineAccount>
+      </foaf:account>
+    </foaf:Person>
+  </maintainer>
+
+  <maintainer>
+    <foaf:Person>
+      <foaf:name>Christoph Matthias Kohnen</foaf:name>
+      <gnome:userid>cmkohnen</gnome:userid>
+      <foaf:mbox rdf:resource="mailto:mail@cmkohnen.de" />
+      <foaf:account>
+        <foaf:OnlineAccount>
+          <foaf:accountServiceHomepage rdf:resource="https://github.com"/>
+          <foaf:accountName>cmkohnen</foaf:accountName>
+        </foaf:OnlineAccount>
+      </foaf:account>
+      <foaf:account>
+        <foaf:OnlineAccount>
+          <foaf:accountServiceHomepage rdf:resource="https://gitlab.gnome.org"/>
+          <foaf:accountName>cmkohnen</foaf:accountName>
+        </foaf:OnlineAccount>
+      </foaf:account>
+    </foaf:Person>
+  </maintainer>
+</Project>

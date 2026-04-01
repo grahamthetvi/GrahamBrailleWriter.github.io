@@ -1,0 +1,50 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsAddStyleDialog: Adw.Dialog {
+  content-width: 450;
+  title: _("Add New Style");
+  focus-widget: confirm_button;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-end-title-buttons: false;
+
+      [start]
+      Button {
+        label: _("Cancel");
+        action-name: "window.close";
+      }
+
+      [end]
+      Button confirm_button {
+        label: _("Add");
+        clicked => $on_accept();
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: Adw.Clamp {
+      margin-start: 12;
+      margin-end: 12;
+      margin-top: 12;
+      margin-bottom: 12;
+
+      Adw.PreferencesGroup {
+        Adw.ComboRow style_templates {
+          title: _("Template");
+          enable-search: true;
+          notify::selected => $on_template_changed();
+        }
+
+        Adw.EntryRow new_style_name {
+          title: _("Name");
+        }
+      }
+    };
+  };
+}

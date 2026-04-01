@@ -1,0 +1,63 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsEditItemGeneratedDataItemBox: Box {
+  orientation: vertical;
+  spacing: 12;
+
+  $GraphsEditItemEquationGroup equation_group {}
+
+  Adw.PreferencesGroup {
+    Box {
+      spacing: 12;
+      orientation: horizontal;
+      homogeneous: true;
+
+      Adw.PreferencesGroup {
+        Adw.EntryRow xstart {
+          title: _("X Start");
+          notify::text => $on_entry_change();
+          apply => $on_entry_apply();
+        }
+      }
+
+      Adw.PreferencesGroup {
+        Adw.EntryRow xstop {
+          title: _("X Stop");
+          notify::text => $on_entry_change();
+          apply => $on_entry_apply();
+        }
+      }
+    }
+  }
+
+  Adw.PreferencesGroup {
+    Adw.SpinRow steps {
+      title: _("Steps");
+      input => $on_steps_input();
+
+      adjustment: Adjustment {
+        step-increment: 1;
+        page-increment: 100;
+        lower: 2;
+        upper: 1000000000;
+      };
+    }
+
+    Adw.ComboRow scale {
+      title: _("Scale");
+      subtitle: _("Determines the spacing between data points");
+
+      model: StringList {
+        strings [
+          C_("scale", "Linear"),
+          C_("scale", "Logarithmic (Base 10)"),
+          C_("scale", "Logarithmic (Base 2)"),
+          C_("scale", "Radians"),
+          C_("scale", "Square Root"),
+          C_("scale", "Inverse"),
+        ]
+      };
+    }
+  }
+}

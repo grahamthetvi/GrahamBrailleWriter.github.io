@@ -1,0 +1,524 @@
+{
+    "name": "python-dependencies",
+    "buildsystem": "simple",
+    "build-commands": [],
+    "modules": [
+        {
+            "name": "openblas",
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "config-opts": [
+                "-DBUILD_TESTING:BOOL=OFF",
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DBUILD_STATIC_LIBS:BOOL=OFF",
+                "-DDYNAMIC_ARCH:BOOL=ON",
+                "-DCMAKE_BUILD_TYPE:STRING=Release"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/OpenMathLib/OpenBLAS",
+                    "commit": "76f1be470c9b9f80dc6e27407e13b975df436489",
+                    "tag": "v0.3.31",
+                    "x-checker-data": {
+                        "type": "git",
+                        "tag-pattern": "^v([\\d.]+)$"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "python-build-dependencies",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"packaging\" \"pyproject-metadata\" \"meson-python\" \"setuptools-scm\""
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/b7/b9/c538f279a4e237a006a2c98387d081e9eb060d203d8ed34467cc0f0b9b53/packaging-26.0-py3-none-any.whl",
+                    "sha256": "b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529",
+                    "x-checker-data": {
+                        "type": "pypi",
+                        "name": "packaging",
+                        "packagetype": "bdist_wheel"
+                    }
+                },
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/1d/0b/da4851b1e2d9c40c9bd74c0abd94510a7d797da9ccde0a90e8953751ed4a/pyproject_metadata-0.11.0-py3-none-any.whl",
+                    "sha256": "85bbecca8694e2c00f63b492c96921d6c228454057c88e7c352b2077fcaa4096",
+                    "x-checker-data": {
+                        "type": "pypi",
+                        "name": "pyproject-metadata",
+                        "packagetype": "bdist_wheel"
+                    }
+                },
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/16/7f/d1b0c65b267a1463d752b324f11d3470e30889daefc4b9ec83029bfa30b5/meson_python-0.19.0-py3-none-any.whl",
+                    "sha256": "67b5906c37404396d23c195e12c8825506074460d4a2e7083266b845d14f0298",
+                    "x-checker-data": {
+                        "type": "pypi",
+                        "name": "meson-python",
+                        "packagetype": "bdist_wheel"
+                    }
+                },
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/3d/ea/ac2bf868899d0d2e82ef72d350d97a846110c709bacf2d968431576ca915/setuptools_scm-9.2.2-py3-none-any.whl",
+                    "sha256": "30e8f84d2ab1ba7cb0e653429b179395d0c33775d54807fc5f1dd6671801aef7",
+                    "x-checker-data": {
+                        "type": "pypi",
+                        "name": "setuptools-scm",
+                        "packagetype": "bdist_wheel"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "python-numpy",
+            "buildsystem": "simple",
+            "build-commands": [],
+            "modules": [
+                {
+                    "name": "numpy",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation -Csetup-args=-Dallow-noblas=false \"numpy\""
+                    ],
+                    "build-options": {
+                        "ldflags": "-lgfortran"
+                    },
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/10/8b/c265f4823726ab832de836cdd184d0986dcf94480f81e8739692a7ac7af2/numpy-2.4.3.tar.gz",
+                            "sha256": "483a201202b73495f00dbc83796c6ae63137a9bdade074f7648b3e32613412dd",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "numpy"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "python-scipy",
+            "buildsystem": "simple",
+            "build-commands": [],
+            "modules": [
+                {
+                    "name": "ply",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"ply\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/e5/69/882ee5c9d017149285cab114ebeab373308ef0f874fcdac9beb90e0ac4da/ply-3.11.tar.gz",
+                            "sha256": "00c7c1aaa88358b9c765b6d3000c6eec0ba42abca5351b095321aef446081da3",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "ply"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "pythran",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"pythran\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/a3/61/8001b38461d751cd1a0c3a6ae84346796a5758123f3ed97a1b121dfbf4f3/gast-0.6.0-py3-none-any.whl",
+                            "sha256": "52b182313f7330389f72b069ba00f174cfe2a06411099547288839c6cbafbd54",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "gast",
+                                "packagetype": "bdist_wheel"
+                            }
+                        },
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/44/e4/6e8731d4d10dd09942a6f5015b2148ae612bf13e49629f33f9fade3c8253/beniget-0.4.2.post1-py3-none-any.whl",
+                            "sha256": "e1b336e7b5f2ae201e6cc21f533486669f1b9eccba018dcff5969cd52f1c20ba",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "beniget",
+                                "packagetype": "bdist_wheel"
+                            }
+                        },
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/2d/25/d608f4a0a4bc3dfad40af2cdb5b92d16b907c3e0a29ff0ab6003740c63ea/pythran-0.18.1-py3-none-any.whl",
+                            "sha256": "e1d811a5843d1881f8adcc3944fe3b84c7317ebf4530617829c19c9836f18b49",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "pythran",
+                                "packagetype": "bdist_wheel"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "pybind11",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"pybind11\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/88/c5/e98d9c51f3d5300d5e40ad9037dd6b3b60736fd02ab68dcc98c96be7592d/pybind11-3.0.2-py3-none-any.whl",
+                            "sha256": "f8a6500548919cc33bcd220d5f984688326f574fa97f1107f2f4fdb4c6fb019f",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "pybind11",
+                                "packagetype": "bdist_wheel"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "scipy",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"scipy\""
+                    ],
+                    "build-options": {
+                        "ldflags": "-lgfortran"
+                    },
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/7a/97/5a3609c4f8d58b039179648e62dd220f89864f56f7357f5d4f45c29eb2cc/scipy-1.17.1.tar.gz",
+                            "sha256": "95d8e012d8cb8816c226aef832200b1d45109ed4464303e997c5b13122b297c0",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "scipy"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "python-matplotlib",
+            "buildsystem": "simple",
+            "build-commands": [],
+            "modules": [
+                {
+                    "name": "qhull",
+                    "buildsystem": "cmake-ninja",
+                    "builddir": true,
+                    "config-opts": [
+                        "-DBUILD_APPLICATIONS:BOOL=OFF",
+                        "-DBUILD_STATIC_LIBS:BOOL=OFF",
+                        "-DQHULL_ENABLE_TESTING:BOOL=OFF",
+                        "-DCMAKE_BUILD_TYPE:STRING=Release",
+                        "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+                    ],
+                    "sources": [
+                        {
+                            "type": "git",
+                            "url": "https://github.com/qhull/qhull",
+                            "commit": "613debeaea72ee66626dace9ba1a2eff11b5d37d",
+                            "tag": "v8.0.2",
+                            "x-checker-data": {
+                                "type": "git",
+                                "tag-pattern": "^v([\\d.]+)$"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Raqm",
+                    "buildsystem": "meson",
+                    "config-opts": [
+                        "--buildtype=release"
+                    ],
+                    "sources": [
+                        {
+                            "type": "git",
+                            "url": "https://github.com/HOST-Oman/libraqm",
+                            "commit": "00814288bec3deb7dc49201e135d572c730a96d3",
+                            "tag": "v0.10.4",
+                            "x-checker-data": {
+                                "type": "git",
+                                "tag-pattern": "^v([\\d.]+)$"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "pillow",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"pillow\" -C zlib=enable -C jpeg=enable -C tiff=enable -C freetype=enable -C raqm=enable -C lcms=enable -C webp=enable -C jpeg2000=enable -C avif=enable"
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/1f/42/5c74462b4fd957fcd7b13b04fb3205ff8349236ea74c7c375766d6c82288/pillow-12.1.1.tar.gz",
+                            "sha256": "9ad8fa5937ab05218e2b6a4cff30295ad35afd2f83ac592e68c0d871bb0fdbc4",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "pillow"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "contourpy",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"contourpy\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/58/01/1253e6698a07380cd31a736d248a3f2a50a7c88779a1813da27503cadc2a/contourpy-1.3.3.tar.gz",
+                            "sha256": "083e12155b210502d0bca491432bb04d56dc3432f95a979b429f2848c3dbe880",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "contourpy"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "fonttools",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"fonttools\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/9a/08/7012b00a9a5874311b639c3920270c36ee0c445b69d9989a85e5c92ebcb0/fonttools-4.62.1.tar.gz",
+                            "sha256": "e54c75fd6041f1122476776880f7c3c3295ffa31962dc6ebe2543c00dca58b5d",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "fonttools"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "cppy",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"cppy\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/8b/3c/823fda3f226d84f983e48005527a6dd2dc365220ac4f098b770779d9f4a1/cppy-1.3.1-py3-none-any.whl",
+                            "sha256": "7ca132b6ef6187384738804bd3a453d4eab7e3274df6dcd35e5d92aae3404717",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "cppy",
+                                "packagetype": "bdist_wheel"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "kiwisolver",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"kiwisolver\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/d0/67/9c61eccb13f0bdca9307614e782fec49ffdde0f7a2314935d489fa93cd9c/kiwisolver-1.5.0.tar.gz",
+                            "sha256": "d4193f3d9dc3f6f79aaed0e5637f45d98850ebf01f7ca20e69457f3e8946b66a",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "kiwisolver"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "cycler",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"cycler\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl",
+                            "sha256": "85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "cycler",
+                                "packagetype": "bdist_wheel"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "python-dateutil",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"python-dateutil\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl",
+                            "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "six",
+                                "packagetype": "bdist_wheel"
+                            }
+                        },
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
+                            "sha256": "a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "python-dateutil",
+                                "packagetype": "bdist_wheel"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "pyparsing",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"pyparsing\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl",
+                            "sha256": "850ba148bd908d7e2411587e247a1e4f0327839c40e2e5e6d05a007ecc69911d",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "pyparsing",
+                                "packagetype": "bdist_wheel"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "matplotlib",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation --config-settings=setup-args=\"-Dsystem-freetype=true\" --config-settings=setup-args=\"-Dsystem-qhull=true\" \"matplotlib\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/8a/76/d3c6e3a13fe484ebe7718d14e269c9569c4eb0020a968a327acb3b9a8fe6/matplotlib-3.10.8.tar.gz",
+                            "sha256": "2299372c19d56bcd35cf05a2738308758d32b9eaed2371898d8f5bd33f084aa3",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "matplotlib"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "python-numexpr",
+            "buildsystem": "simple",
+            "build-commands": [],
+            "modules": [
+                {
+                    "name": "numexpr",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"numexpr\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/cb/2f/fdba158c9dbe5caca9c3eca3eaffffb251f2fb8674bf8e2d0aed5f38d319/numexpr-2.14.1.tar.gz",
+                            "sha256": "4be00b1086c7b7a5c32e31558122b7b80243fe098579b170967da83f3152b48b",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "numexpr"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "python-sympy",
+            "buildsystem": "simple",
+            "build-commands": [],
+            "modules": [
+                {
+                    "name": "sympy",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"sympy\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl",
+                            "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "mpmath",
+                                "packagetype": "bdist_wheel"
+                            }
+                        },
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl",
+                            "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "sympy",
+                                "packagetype": "bdist_wheel"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "python-gio-pyio",
+            "buildsystem": "simple",
+            "build-commands": [],
+            "modules": [
+                {
+                    "name": "gio-pyio",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-build-isolation \"gio-pyio\""
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/5b/51/3c95292f35445e525922c2488d466b4e885595779449bd1becac66546a8e/gio_pyio-0.0.6.tar.gz",
+                            "sha256": "bab1231c5a456eee014a27e169ba48735cf532e34b36688b86b74ca3e5ab5915",
+                            "x-checker-data": {
+                                "type": "pypi",
+                                "name": "gio-pyio"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

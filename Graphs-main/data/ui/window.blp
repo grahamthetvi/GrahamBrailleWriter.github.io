@@ -1,0 +1,355 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsWindow: Adw.ApplicationWindow {
+  default-width: 1200;
+  default-height: 700;
+  width-request: 360;
+  height-request: 200;
+
+  ShortcutController {
+    Shortcut {
+      trigger: "<control>w";
+      action: "action(window.close)";
+    }
+
+    Shortcut {
+      trigger: "<control>question";
+      action: "action(win.show-shortcuts)";
+    }
+
+    Shortcut {
+      trigger: "<control>comma";
+      action: "action(win.figure-settings)";
+    }
+
+    Shortcut {
+      trigger: "<control>N";
+      action: "action(win.add-data)";
+    }
+
+    Shortcut {
+      trigger: "<control><alt>N";
+      action: "action(win.add-equation)";
+    }
+
+    Shortcut {
+      trigger: "<control><shift>N";
+      action: "action(win.generate-data)";
+    }
+
+    Shortcut {
+      trigger: "<control>A";
+      action: "action(win.select-all)";
+    }
+
+    Shortcut {
+      trigger: "<control><shift>A";
+      action: "action(win.select-none)";
+    }
+
+    Shortcut {
+      trigger: "<control>Z";
+      action: "action(win.undo)";
+    }
+
+    Shortcut {
+      trigger: "<control><shift>Z";
+      action: "action(win.redo)";
+    }
+
+    Shortcut {
+      trigger: "<control>KP_0";
+      action: "action(win.optimize-limits)";
+    }
+
+    Shortcut {
+      trigger: "<control>0";
+      action: "action(win.optimize-limits)";
+    }
+
+    Shortcut {
+      trigger: "<alt>Z";
+      action: "action(win.view-back)";
+    }
+
+    Shortcut {
+      trigger: "<alt><shift>Z";
+      action: "action(win.view-forward)";
+    }
+
+    Shortcut {
+      trigger: "<control><shift>E";
+      action: "action(win.export-data)";
+    }
+
+    Shortcut {
+      trigger: "<control>E";
+      action: "action(win.export-figure)";
+    }
+
+    Shortcut {
+      trigger: "<control>period";
+      action: "action(win.styles)";
+    }
+
+    Shortcut {
+      trigger: "<control>S";
+      action: "action(win.save-project)";
+    }
+
+    Shortcut {
+      trigger: "<control>O";
+      action: "action(win.open-project)";
+    }
+
+    Shortcut {
+      trigger: "Delete";
+      action: "action(win.delete-selected)";
+    }
+
+    Shortcut {
+      trigger: "<control>plus|<control>KP_Add|<control>equal|<control>ZoomIn";
+      action: "action(win.zoom-in)";
+    }
+
+    Shortcut {
+      trigger: "<control>minus|<control>KP_Subtract|<control>ZoomOut";
+      action: "action(win.zoom-out)";
+    }
+
+    Shortcut {
+      trigger: "<control><shift>S";
+      action: "action(win.save-project-as)";
+    }
+
+    Shortcut {
+      trigger: "<control><shift>N";
+      action: "action(app.new-window)";
+    }
+
+    Shortcut {
+      trigger: "F9";
+      action: "action(win.toggle-sidebar)";
+    }
+
+    Shortcut {
+      trigger: "<control>1";
+      action: "action(win.mode-pan)";
+    }
+
+    Shortcut {
+      trigger: "<control>2";
+      action: "action(win.mode-zoom)";
+    }
+
+    Shortcut {
+      trigger: "<control>3";
+      action: "action(win.mode-select)";
+    }
+  }
+
+  // If both width and height are limited
+  Adw.Breakpoint {
+    condition ("max-width: 700sp and max-height: 410sp")
+
+    setters {
+      overlay_split_view.collapsed: true;
+      undo_button.visible: false;
+      content_footerbar.visible: true;
+      main_page.height_limited: true;
+    }
+  }
+
+  // If only height is limited
+  Adw.Breakpoint {
+    condition ("min-width: 700sp and max-height: 410sp")
+
+    setters {
+      main_page.height_limited: true;
+    }
+  }
+
+  // If only width is limited
+  Adw.Breakpoint {
+    condition ("max-width: 700sp and min-height: 410sp")
+
+    setters {
+      overlay_split_view.collapsed: true;
+      undo_button.visible: false;
+      content_footerbar.visible: true;
+    }
+  }
+
+  // If width is very limited (below 380 pixels)
+  Adw.Breakpoint {
+    condition ("max-width: 380sp and min-height: 410sp")
+
+    setters {
+      sidebar_navigation_view.width-request: 340;
+      overlay_split_view.collapsed: true;
+      undo_button.visible: false;
+      content_footerbar.visible: true;
+    }
+  }
+
+  // If width is very limited (below 380 pixels), and height is limited
+  Adw.Breakpoint {
+    condition ("max-width: 380sp and max-height: 410sp")
+
+    setters {
+      sidebar_navigation_view.width-request: 340;
+      overlay_split_view.collapsed: true;
+      undo_button.visible: false;
+      content_footerbar.visible: true;
+      main_page.height_limited: true;
+    }
+  }
+
+  content: Overlay drag_overlay {
+    styles [
+      "drag-overlay",
+    ]
+
+    [overlay]
+    Revealer drag_revealer {
+      can-target: false;
+      transition-type: crossfade;
+
+      Adw.StatusPage {
+        title: _("Drop Here to Import");
+        icon-name: "list-add-symbolic";
+
+        styles [
+          "drag-overlay-status-page",
+        ]
+      }
+    }
+
+    child: Adw.OverlaySplitView overlay_split_view {
+      enable-show-gesture: bind overlay_split_view.collapsed;
+      enable-hide-gesture: bind overlay_split_view.collapsed;
+
+      sidebar: Adw.NavigationView sidebar_navigation_view {
+        width-request: 360;
+
+        $GraphsMainSidebarPage main_page {}
+
+        $GraphsEditItemPage edit_page {}
+      };
+
+      content: Adw.ToolbarView content_view {
+        styles [
+          "canvas-view",
+        ]
+
+        [top]
+        Adw.HeaderBar {
+          title-widget: Adw.WindowTitle content_title {};
+
+          [start]
+          ToggleButton {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Show Sidebar");
+            active: bind overlay_split_view.show-sidebar bidirectional;
+            visible: bind overlay_split_view.collapsed;
+          }
+
+          [start]
+          Button undo_button {
+            action-name: "win.undo";
+            icon-name: "edit-undo-symbolic";
+            tooltip-text: _("Undo");
+          }
+
+          [start]
+          Button redo_button {
+            action-name: "win.redo";
+            icon-name: "edit-redo-symbolic";
+            tooltip-text: _("Redo");
+            visible: bind undo_button.visible;
+          }
+
+          [end]
+          Button optimize_limits_button {
+            action-name: "win.optimize-limits";
+            icon-name: "view-reveal-symbolic";
+            tooltip-text: _("Optimize View Limits");
+            visible: bind undo_button.visible;
+          }
+
+          [end]
+          Button view_forward_button {
+            action-name: "win.view-forward";
+            icon-name: "go-next-symbolic";
+            tooltip-text: _("Next View");
+            visible: bind undo_button.visible;
+          }
+
+          [end]
+          Button view_back_button {
+            action-name: "win.view-back";
+            icon-name: "go-previous-symbolic";
+            tooltip-text: _("Previous View");
+            visible: bind undo_button.visible;
+          }
+        }
+
+        [bottom]
+        Adw.HeaderBar content_footerbar {
+          show-title: false;
+          show-end-title-buttons: false;
+          visible: false;
+
+          [start]
+          Button sidebar_undo_button {
+            action-name: "win.undo";
+            icon-name: "edit-undo-symbolic";
+            tooltip-text: _("Undo");
+            sensitive: bind undo_button.sensitive;
+          }
+
+          [start]
+          Button sidebar_redo_button {
+            action-name: "win.redo";
+            icon-name: "edit-redo-symbolic";
+            tooltip-text: _("Redo");
+            sensitive: bind redo_button.sensitive;
+          }
+
+          [end]
+          Button sidebar_optimize_limits_button {
+            action-name: "win.optimize-limits";
+            icon-name: "view-reveal-symbolic";
+            tooltip-text: _("Optimize View Limits");
+          }
+
+          [end]
+          Button sidebar_view_forward_button {
+            action-name: "win.view-forward";
+            icon-name: "go-next-symbolic";
+            tooltip-text: _("Next View");
+            sensitive: bind view_forward_button.sensitive;
+          }
+
+          [end]
+          Button sidebar_view_back_button {
+            action-name: "win.view-back";
+            icon-name: "go-previous-symbolic";
+            tooltip-text: _("Previous View");
+            sensitive: bind view_back_button.sensitive;
+          }
+        }
+
+        content: Adw.ToastOverlay toast_overlay {
+          focusable: true;
+
+          child: Adw.StatusPage {
+            icon-name: "dialog-error-symbolic";
+            title: _("Canvas Failed to Load");
+          };
+        };
+      };
+    };
+  };
+}

@@ -1,0 +1,66 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsStylePreview: Adw.Bin {
+  child: AspectFrame {
+    child: Box {
+      orientation: vertical;
+
+      Overlay {
+        height-request: 93;
+        width-request: 155;
+
+        [overlay]
+        Image {
+          halign: end;
+          valign: end;
+          margin-end: 6;
+          margin-bottom: 6;
+          icon-name: "check-round-outline-whole-symbolic";
+          name: "indicator";
+        }
+
+        [overlay]
+        MenuButton menu_button {
+          visible: false;
+          icon-name: "view-more-symbolic";
+          halign: end;
+          valign: start;
+          margin-end: 4;
+          margin-top: 4;
+          menu-model: style_menu;
+
+          styles [
+            "flat",
+          ]
+        }
+
+        child: Picture picture {};
+      }
+
+      Label label {
+        margin-top: 8;
+        ellipsize: end;
+      }
+    };
+  };
+}
+
+menu style_menu {
+  section {
+    item {
+      label: _("Open");
+      action: "style.open";
+    }
+
+    item {
+      label: _("Open With…");
+      action: "style.open_with";
+    }
+
+    item {
+      label: _("Delete…");
+      action: "style.delete";
+    }
+  }
+}

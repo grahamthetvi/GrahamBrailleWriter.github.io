@@ -1,7 +1,12 @@
 /**
  * chartBraille.ts
  * Generates ASCII BRF strings representing data charts mapped to a 6-dot braille cell grid.
+ *
+ * Phase C (future): optional axis ticks/labels with compact numeric vs vertical-word encoding;
+ * see chartAdvanced.ts. Chart label numeric-indicator policy is a product convention, not enforced here.
  */
+
+import type { ChartSpec } from '../types/chart';
 
 // Mapping of ASCII BRF characters [0x20-0x5F] to their Unicode Braille pattern offsets (0-63)
 const BRF_TO_UNICODE_OFFSETS = [
@@ -96,6 +101,55 @@ export class GridCanvas {
 
         return lines.join('\n');
     }
+}
+
+/** Full chart BRF from a validated ChartSpec (single series). */
+export function generateChartBrf(spec: ChartSpec): string {
+    if (spec.kind === 'line') {
+        return generateLineChart(spec.values, spec.cellsWidth, spec.cellsHeight);
+    }
+    return generateBarChart(spec.values, spec.cellsWidth, spec.cellsHeight);
+}
+
+/**
+ * Plain-English summary and value list for screen readers and embossing clarity.
+ * Insert above the :::chart block; the editor translates this text with the active table.
+ */
+export function buildChartSummaryPlainText(spec: ChartSpec): string {
+    const v = spec.values;
+    if (v.length === 0) return '';
+
+    const kindLabel = spec.kind === 'line' ? 'Line chart' : 'Bar chart';
+    const lines: string[] = [];
+
+    const head = spec.title?.trim()
+        ? `${kindLabel}: ${spec.title.trim()}`
+        : `${kindLabel}`;
+    lines.push(head);
+    lines.push(
+        `Grid ${spec.cellsWidth} cells wide by ${spec.cellsHeight} lines tall. ` +
+            `${v.length} point${v.length === 1 ? '' : 's'}.`
+    );
+
+    const min = Math.min(...v);
+    const max = Math.max(...v);
+    lines.push(`Range: minimum ${min}, maximum ${max}.`);
+
+    if (spec.xAxisLabel?.trim() || spec.yAxisLabel?.trim()) {
+        const xl = spec.xAxisLabel?.trim();
+        const yl = spec.yAxisLabel?.trim();
+        const parts: string[] = [];
+        if (yl) parts.push(`Y-axis: ${yl}`);
+        if (xl) parts.push(`X-axis: ${xl}`);
+        lines.push(parts.join('. ') + '.');
+    }
+
+    lines.push('Values (index: value):');
+    v.forEach((n, i) => {
+        lines.push(`  ${i + 1}: ${n}`);
+    });
+
+    return lines.join('\n');
 }
 
 export function generateLineChart(data: number[], cellsWidth: number, cellsHeight: number): string {

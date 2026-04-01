@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="graphs">
+  <enum id="se.sjoerd.Graphs.actions.center-values">
+    <value nick="max-y" value="0"/>
+    <value nick="middle-x" value="1"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.actions.smoothen-types">
+    <value nick="savgol" value="0"/>
+    <value nick="moving-average" value="1"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.curve-fitting.equation">
+    <value nick="linear" value="0"/>
+    <value nick="quadratic" value="1"/>
+    <value nick="exponential" value="2"/>
+    <value nick="power" value="3"/>
+    <value nick="log" value="4"/>
+    <value nick="sigmoid" value="5"/>
+    <value nick="gaussian" value="6"/>
+    <value nick="custom" value="7"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.curve-fitting.confidence">
+    <value nick="none" value="0"/>
+    <value nick="1std" value="1"/>
+    <value nick="2std" value="2"/>
+    <value nick="3std" value="3"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.curve-fitting.optimization">
+    <value nick="lm" value="0"/>
+    <value nick="trf" value="1"/>
+    <value nick="dogbox" value="2"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.export-figure.file-formats">
+    <value nick="eps" value="0"/> <!--Encapsulated Postscript-->
+    <value nick="jpeg" value="1"/> <!--Joint Photographic Experts Group-->
+    <value nick="pdf" value="2"/> <!--Portable Document Format-->
+    <value nick="png" value="3"/> <!--Portable Network Graphics-->
+    <value nick="ps" value="4"/> <!--Postscript-->
+    <value nick="svg" value="5"/> <!--Scalable Vector Graphics-->
+    <value nick="webp" value="6"/> <!--WebP Image Format-->
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.figure.legend-positions">
+    <value nick="Best" value="0"/>
+    <value nick="Upper right" value="1"/>
+    <value nick="Upper left" value="2"/>
+    <value nick="Lower Left" value="3"/>
+    <value nick="Lower right" value="4"/>
+    <value nick="Center left" value="5"/>
+    <value nick="Center right" value="6"/>
+    <value nick="Lower center" value="7"/>
+    <value nick="Upper center" value="8"/>
+    <value nick="Center" value="9"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.figure.scales">
+    <value nick="Linear" value="0"/>
+    <value nick="Logarithmic" value="1"/>
+    <value nick="Logarithmic (Base 2)" value="2"/>
+    <value nick="Radians" value="3"/>
+    <value nick="Square Root" value="4"/>
+    <value nick="Inverse" value="5"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.import-params.columns.separators">
+    <value nick="comma" value="0"/>
+    <value nick="period" value="1"/>
+  </enum>
+
+  <enum id="se.sjoerd.Graphs.import-params.columns.delimiters">
+    <value nick="whitespace" value="0"/>
+    <value nick="tab" value="1"/>
+    <value nick="colon" value="2"/>
+    <value nick="semicolon" value="3"/>
+    <value nick="comma" value="4"/>
+    <value nick="period" value="5"/>
+    <value nick="custom" value="6"/>
+  </enum>
+
+  <schema id="se.sjoerd.Graphs" path="/se/sjoerd/Graphs/">
+    <child name="actions" schema="se.sjoerd.Graphs.actions"/>
+    <child name="add-equation" schema="se.sjoerd.Graphs.add-equation"/>
+    <child name="generate-data" schema="se.sjoerd.Graphs.generate-data"/>
+    <child name="curve-fitting" schema="se.sjoerd.Graphs.curve-fitting"/>
+    <child name="export-figure" schema="se.sjoerd.Graphs.export-figure"/>
+    <child name="figure" schema="se.sjoerd.Graphs.figure"/>
+    <child name="import-params" schema="se.sjoerd.Graphs.import-params"/>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.actions">
+    <child name="smoothen" schema="se.sjoerd.Graphs.actions.smoothen"/>
+    <key name="center" enum="se.sjoerd.Graphs.actions.center-values">
+      <default>"middle-x"</default>
+    </key>
+    <key name="smoothen" enum="se.sjoerd.Graphs.actions.smoothen-types">
+      <default>"savgol"</default>
+    </key>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.curve-fitting">
+    <key name="equation" enum="se.sjoerd.Graphs.curve-fitting.equation">
+      <default>"linear"</default>
+    </key>
+    <key name="optimization" enum="se.sjoerd.Graphs.curve-fitting.optimization">
+      <default>"trf"</default>
+    </key>
+    <key name="confidence" enum="se.sjoerd.Graphs.curve-fitting.confidence">
+      <default>"1std"</default>
+    </key>
+    <key name="custom-equation" type="s">
+      <default>"a*x+b"</default>
+    </key>
+    <key name="show-residuals" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.actions.smoothen">
+    <key name="savgol-window" type="i">
+      <default>10</default>
+    </key>
+    <key name="savgol-polynomial" type="i">
+      <default>3</default>
+    </key>
+    <key name="moving-average-box" type="i">
+      <default>4</default>
+    </key>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.figure">
+    <key name="bottom-label" type="s">
+      <default>"X Value"</default>
+    </key>
+    <key name="bottom-scale" enum="se.sjoerd.Graphs.figure.scales">
+      <default>"Linear"</default>
+    </key>
+    <key name="custom-style" type="s">
+      <default>"Adwaita"</default>
+    </key>
+    <key name="left-label" type="s">
+      <default>"Y Value"</default>
+    </key>
+    <key name="left-scale" enum="se.sjoerd.Graphs.figure.scales">
+      <default>"Linear"</default>
+    </key>
+    <key name="legend" type="b">
+      <default>true</default>
+    </key>
+    <key name="legend-position" enum="se.sjoerd.Graphs.figure.legend-positions">
+      <default>"Best"</default>
+    </key>
+    <key name="right-label" type="s">
+      <default>"Y Value 2"</default>
+    </key>
+    <key name="right-scale" enum="se.sjoerd.Graphs.figure.scales">
+      <default>"Linear"</default>
+    </key>
+    <key name="title" type="s">
+      <default>""</default>
+    </key>
+    <key name="top-label" type="s">
+      <default>"X Value 2"</default>
+    </key>
+    <key name="top-scale" enum="se.sjoerd.Graphs.figure.scales">
+      <default>"Linear"</default>
+    </key>
+    <key name="use-custom-style" type="b">
+      <default>false</default>
+    </key>
+    <key name="hide-unselected" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.add-equation">
+    <key name="equation" type="s">
+      <default>"X"</default>
+    </key>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.generate-data">
+    <key name="equation" type="s">
+      <default>"X"</default>
+    </key>
+    <key name="xstart" type="s">
+      <default>"0"</default>
+    </key>
+    <key name="xstop" type="s">
+      <default>"10"</default>
+    </key>
+    <key name="steps" type="i">
+      <default>100</default>
+    </key>
+    <key name="scale" type="i">
+      <default>0</default>
+    </key>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.export-figure">
+    <key name="file-format" enum="se.sjoerd.Graphs.export-figure.file-formats">
+      <default>"png"</default>
+    </key>
+    <key name="transparent" type="b">
+      <default>true</default>
+    </key>
+    <key name="use-window-size" type="b">
+      <default>false</default>
+    </key>
+    <key name="width" type="i">
+      <default>800</default>
+    </key>
+    <key name="height" type="i">
+      <default>600</default>
+    </key>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.import-params">
+    <child name="columns" schema="se.sjoerd.Graphs.import-params.columns"/>
+    <child name="spreadsheet" schema="se.sjoerd.Graphs.import-params.spreadsheet"/>
+    <child name="sql" schema="se.sjoerd.Graphs.import-params.sql"/>
+  </schema>
+
+  <schema id="se.sjoerd.Graphs.import-params.columns">
+    <!--
+    Item import strings.
+    Values separated by ";", items separated by ";;".
+
+    Settings in order:
+    x-column index
+    y-column index (ignored if single-column)
+    use single-column mode
+    equation for single-column mode (will be ignored if not single-column)
+    use_xerr
+    use_yerr (ignored if single-column)
+    x_errorbar-column index
+    y_errorbar-column index (ignored if single-column)
+
+    All settings must be present.
+    -->
+    <key name="items" type="s">
+      <default>"0;1;false;n;false;false;2;3"</default>
+    </key>
+    <key name="delimiter" enum="se.sjoerd.Graphs.import-params.columns.delimiters">
+      <default>"whitespace"</default>
+    </key>
+    <key name="custom-delimiter" type="s">
+      <default>""</default>
+    </key>
+    <key name="separator" enum="se.sjoerd.Graphs.import-params.columns.separators">
+      <default>"period"</default>
+    </key>
+    <key name="skip-rows" type="i">
+      <default>0</default>
+    </key>
+  </schema>
+  <schema id="se.sjoerd.Graphs.import-params.spreadsheet">
+    <!--
+    Item import strings.
+    Values separated by ";", items separated by ";;".
+
+    Settings in order:
+    x-column index
+    y-column index (ignored if single-column)
+    use single-column mode
+    equation for single-column mode (will be ignored if not single-column)
+    use_xerr
+    use_yerr
+    x_errorbar-column index
+    y_errorbar-column index (ignored if single-column)
+
+    All settings must be present.
+    -->
+    <key name="items" type="s">
+      <default>"0;1;false;n;false;false;2;3"</default>
+    </key>
+    <key name="sheet-index" type="i">
+      <default>0</default>
+    </key>
+  </schema>
+  <schema id="se.sjoerd.Graphs.import-params.sql">
+    <key name="use-xerr" type="b">
+      <default>false</default>
+    </key>
+    <key name="use-yerr" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+</schemalist>

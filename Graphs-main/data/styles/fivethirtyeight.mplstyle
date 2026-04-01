@@ -1,0 +1,122 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#~graphs name: FiveThirtyEight
+#~graphs ticklabels: False
+#~graphs errorbar.capthick: 2
+#~graphs errorbar.capsize: 4
+#~graphs errorbar.linewidth: 2
+#~graphs errorbar.barsabove: False
+#~graphs errorbar.color_cycle: 008FD5, FC4F30, E5AE38, 6D904F, 8B8B8B, 810F7C
+
+# font
+font.family: sans-serif
+font.sans-serif: DejaVu Sans
+font.style: normal
+font.weight: 400
+axes.titleweight: 400
+axes.labelweight: 400
+figure.titleweight: 400
+figure.labelweight: 400
+font.variant: normal
+font.size: 14
+axes.labelsize: 14
+xtick.labelsize: 14
+ytick.labelsize: 14
+axes.titlesize: 14
+legend.fontsize: 14
+figure.titlesize: 14
+figure.labelsize: 14
+
+# lines
+lines.linewidth: 4
+lines.linestyle: solid
+lines.marker: none
+lines.markersize: 6
+lines.markerfacecolor: auto
+lines.markeredgecolor: auto
+lines.markeredgewidth: 0.5
+lines.dash_joinstyle: round
+lines.dash_capstyle: butt
+lines.solid_joinstyle: round
+lines.solid_capstyle: butt
+lines.antialiased: True
+lines.dashed_pattern: 6, 6
+lines.dashdot_pattern: 3, 5, 1, 5
+lines.dotted_pattern: 1, 3
+lines.scale_dashes: False
+markers.fillstyle: full
+
+# axes
+axes.spines.bottom: True
+axes.spines.left: True
+axes.spines.top: True
+axes.spines.right: True
+
+# ticks
+xtick.direction: out
+xtick.minor.visible: False
+xtick.major.width: 0
+xtick.minor.width: 0
+xtick.major.size: 0
+xtick.minor.size: 0
+xtick.alignment: center
+
+ytick.direction: out
+ytick.minor.visible: False
+ytick.major.width: 0
+ytick.minor.width: 0
+ytick.major.size: 0
+ytick.minor.size: 0
+ytick.alignment: center
+
+xtick.bottom: False
+ytick.left: False
+xtick.top: False
+ytick.right: False
+
+# grid
+axes.grid: True
+axes.grid.which: major
+axes.grid.axis: both
+grid.linewidth: 1.0
+grid.alpha: 1.0
+grid.linestyle: -
+
+# padding
+xtick.major.pad: 7
+xtick.minor.pad: 7
+ytick.major.pad: 7
+ytick.minor.pad: 7
+axes.labelpad: 5
+axes.titlepad: 15
+
+# colors
+text.color: 262626
+axes.labelcolor: 262626
+xtick.labelcolor: 262626
+ytick.labelcolor: 262626
+xtick.color: 262626
+ytick.color: 262626
+axes.edgecolor: F0F0F0
+grid.color: CBCBCB
+axes.facecolor: F0F0F0
+figure.facecolor: F0F0F0
+figure.edgecolor: F0F0F0
+
+axes.prop_cycle: cycler('color', ['008FD5', 'FC4F30', 'E5AE38', '6D904F', '8B8B8B', '810F7C'])
+patch.facecolor: 008FD5
+
+# other
+axes.linewidth: 3
+
+mathtext.default: regular
+axes.axisbelow: True
+legend.fancybox: True
+legend.frameon: True
+
+# custom
+patch.edgecolor: f0f0f0
+patch.linewidth: 0.5
+svg.fonttype: path
+figure.subplot.left: 0.08
+figure.subplot.right: 0.95
+figure.subplot.bottom: 0.07

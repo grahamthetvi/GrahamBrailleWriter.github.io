@@ -1,0 +1,97 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsExportFigureDialog: Adw.Dialog {
+  content-width: 450;
+  title: _("Export Figure");
+  focus-widget: confirm_button;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-end-title-buttons: false;
+
+      [start]
+      Button {
+        label: _("Cancel");
+        action-name: "window.close";
+      }
+
+      [end]
+      Button confirm_button {
+        label: _("Export");
+        clicked => $on_accept();
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: Adw.Clamp {
+      maximum-size: 800;
+      margin-bottom: 12;
+      margin-top: 12;
+      margin-start: 12;
+      margin-end: 12;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 10;
+
+        Adw.PreferencesGroup {
+          title: _("Export Settings");
+
+          Adw.ComboRow file_format {
+            title: _("File Format");
+
+            model: StringList {
+              strings [
+                C_("file-format", "Encapsulated PostScript"),
+                C_("file-format", "JPEG"),
+                C_("file-format", "PDF"),
+                C_("file-format", "PNG"),
+                C_("file-format", "PostScript"),
+                C_("file-format", "SVG"),
+                C_("file-format", "WebP"),
+              ]
+            };
+          }
+
+          Adw.SwitchRow transparent {
+            title: _("Transparent Background");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Export Size");
+
+          Adw.SpinRow width {
+            title: _("Width (pixels)");
+
+            adjustment: Adjustment {
+              step-increment: 10;
+              lower: 100;
+              upper: 7680;
+            };
+          }
+
+          Adw.SpinRow height {
+            title: _("Height (pixels)");
+
+            adjustment: Adjustment {
+              step-increment: 10;
+              lower: 100;
+              upper: 4320;
+            };
+          }
+
+          Adw.ButtonRow {
+            title: _("Use Same Size as App");
+            activated => $on_use_window_size();
+          }
+        }
+      };
+    };
+  };
+}

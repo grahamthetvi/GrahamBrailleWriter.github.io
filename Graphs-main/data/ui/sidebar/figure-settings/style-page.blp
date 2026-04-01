@@ -1,0 +1,41 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsStylePage: Adw.NavigationPage {
+  title: _("Style");
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [end]
+      Button {
+        label: _("Manage");
+        action-name: "app.style-editor";
+      }
+    }
+
+    content: ScrolledWindow {
+      hscrollbar-policy: never;
+
+      child: Viewport {
+        child: Adw.Clamp {
+          margin-bottom: 6;
+          margin-top: 6;
+          margin-start: 6;
+          margin-end: 6;
+          halign: center;
+          hexpand: true;
+
+          child: GridView style_grid {
+            min-columns: 2;
+            max-columns: 2;
+
+            styles [
+              "style-grid",
+            ]
+          };
+        };
+      };
+    };
+  }
+}

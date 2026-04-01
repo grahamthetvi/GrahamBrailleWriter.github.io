@@ -1,0 +1,57 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GraphsSqlGroup: Adw.PreferencesGroup {
+  Adw.ComboRow table_row {
+    title: _("Database Table");
+    notify::selected => $on_table_changed();
+  }
+
+  Adw.ComboRow column_x {
+    title: _("Column X");
+    notify::selected => $on_columns_changed();
+  }
+
+  Adw.ComboRow column_y {
+    title: _("Column Y");
+    notify::selected => $on_columns_changed();
+  }
+
+  Adw.PreferencesRow {
+    activatable: false;
+
+    Box {
+      orientation: horizontal;
+      homogeneous: true;
+
+      Adw.SwitchRow use_xerr {
+        title: _("X Error Bars");
+        notify::active => $on_err_toggled();
+      }
+
+      Adw.SwitchRow use_yerr {
+        title: _("Y Error Bars");
+        notify::active => $on_err_toggled();
+      }
+    }
+  }
+
+  Adw.ComboRow column_xerr {
+    title: _("X Error Column");
+    sensitive: bind use_xerr.active;
+    notify::selected => $on_columns_changed();
+  }
+
+  Adw.ComboRow column_yerr {
+    title: _("Y Error Column");
+    sensitive: bind use_yerr.active;
+    notify::selected => $on_columns_changed();
+  }
+
+  Label no_numeric_warning {
+    margin-top: 12;
+    margin-bottom: 2;
+    label: _("This table contains no numeric columns");
+    visible: false;
+  }
+}

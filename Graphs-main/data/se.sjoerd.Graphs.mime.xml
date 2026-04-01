@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="application/graphs">
+        <comment>Graphs Project File</comment>
+        <acronym>Graphs</acronym>
+        <expanded-acronym>Graphs Project File</expanded-acronym>
+        <glob pattern="*.graphs"/>
+    </mime-type>
+    <mime-type type="text/mplstyle">
+        <comment>matplotlib Style File</comment>
+        <acronym>mplstyle</acronym>
+        <expanded-acronym>matplotlib style</expanded-acronym>
+        <glob pattern="*.mplstyle"/>
+    </mime-type>
+</mime-info>
