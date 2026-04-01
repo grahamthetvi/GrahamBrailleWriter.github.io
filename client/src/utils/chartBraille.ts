@@ -253,6 +253,50 @@ export function buildChartSummaryPlainText(spec: ChartSpec): string {
     return lines.join('\n');
 }
 
+/**
+ * Nemeth-oriented summary: literary lines for kind and title; each numeric / mathy
+ * sentence and each (x, y) pair in its own `$$…$$` block (matches toolbar Nemeth rules).
+ */
+export function buildChartSummaryNemethPlainText(spec: ChartSpec): string {
+    const v = spec.values;
+    if (v.length === 0) return '';
+
+    const kindLabel = spec.kind === 'line' ? 'Line chart' : 'Bar chart';
+    const lines: string[] = [];
+
+    lines.push(`${kindLabel}:`);
+    const title = spec.title?.trim();
+    if (title) {
+        lines.push(title);
+    }
+
+    lines.push(
+        `$$Grid ${spec.cellsWidth} cells wide by ${spec.cellsHeight} lines tall. ` +
+            `${v.length} point${v.length === 1 ? '' : 's'}.$$`
+    );
+
+    const min = Math.min(...v);
+    const max = Math.max(...v);
+    lines.push(`$$Range: minimum ${min}, maximum ${max}.$$`);
+
+    if (spec.xAxisLabel?.trim() || spec.yAxisLabel?.trim()) {
+        const xl = spec.xAxisLabel?.trim();
+        const yl = spec.yAxisLabel?.trim();
+        const parts: string[] = [];
+        if (yl) parts.push(`Y-axis: ${yl}`);
+        if (xl) parts.push(`X-axis: ${xl}`);
+        lines.push('$$' + parts.join('. ') + '.$$');
+    }
+
+    const xv = spec.xValues;
+    lines.push('Values (x, y):');
+    v.forEach((n, i) => {
+        lines.push(`  $$${xv[i]}: ${n}$$`);
+    });
+
+    return lines.join('\n');
+}
+
 export function generateLineChart(
     xData: number[],
     yData: number[],

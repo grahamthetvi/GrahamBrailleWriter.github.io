@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { validateChartSpec, parseCsvRows, parseCommaSeparatedNumbers, CHART_LIMITS } from './chart';
-import { buildChartSummaryPlainText, generateLineChart, generateBarChart } from '../utils/chartBraille';
+import {
+    buildChartSummaryPlainText,
+    buildChartSummaryNemethPlainText,
+    generateLineChart,
+    generateBarChart,
+} from '../utils/chartBraille';
 import type { ChartSpec } from './chart';
 
 function baseSpec(over: Partial<ChartSpec> = {}): ChartSpec {
@@ -112,5 +117,33 @@ describe('buildChartSummaryPlainText', () => {
         expect(text).toContain('Values (x, y):');
         expect(text).toContain('0: 10');
         expect(text).toContain('1: 20');
+    });
+});
+
+describe('buildChartSummaryNemethPlainText', () => {
+    it('uses literary kind/title lines and per-line $$ blocks', () => {
+        const text = buildChartSummaryNemethPlainText(
+            baseSpec({
+                title: 'Sales',
+                xValues: [2000, 2001, 2002, 2003],
+                values: [1, 2, 3, 8],
+                xAxisLabel: 'Year',
+                yAxisLabel: 'Units',
+            })
+        );
+        expect(text).toBe(
+            [
+                'Line chart:',
+                'Sales',
+                '$$Grid 30 cells wide by 15 lines tall. 4 points.$$',
+                '$$Range: minimum 1, maximum 8.$$',
+                '$$Y-axis: Units. X-axis: Year.$$',
+                'Values (x, y):',
+                '  $$2000: 1$$',
+                '  $$2001: 2$$',
+                '  $$2002: 3$$',
+                '  $$2003: 8$$',
+            ].join('\n')
+        );
     });
 });

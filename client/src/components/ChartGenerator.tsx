@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, type CSSProperties } from 're
 import {
     generateChartBrf,
     buildChartSummaryPlainText,
+    buildChartSummaryNemethPlainText,
 } from '../utils/chartBraille';
 import {
     type ChartKind,
@@ -241,10 +242,10 @@ export function ChartGenerator({
             return;
         }
         const brf = generateChartBrf(spec);
-        let summary = buildChartSummaryPlainText(spec);
-        if (mathCode === 'nemeth') {
-            summary = `$$${summary}$$`;
-        }
+        const summary =
+            mathCode === 'nemeth'
+                ? buildChartSummaryNemethPlainText(spec)
+                : buildChartSummaryPlainText(spec);
         const pageBreakBeforeChart = mathCode === 'nemeth' ? '\n\n\f\n\n' : '\n\n';
         const block = `${summary}${pageBreakBeforeChart}:::chart\n${brf}\n:::\n`;
         onInsert(block);
@@ -255,7 +256,7 @@ export function ChartGenerator({
     const reviewSummaryPreview =
         reviewValidation.ok && reviewSpec.values.length > 0
             ? mathCode === 'nemeth'
-                ? `$$${buildChartSummaryPlainText(reviewSpec)}$$`
+                ? buildChartSummaryNemethPlainText(reviewSpec)
                 : buildChartSummaryPlainText(reviewSpec)
             : '';
 
@@ -509,10 +510,11 @@ export function ChartGenerator({
                                 >
                                     Applies when the editor translates <code>$$…$$</code> and{' '}
                                     <code>{`\\(`}…{`\\)`}</code>. This choice is saved for the app and
-                                    used for the whole document. With <strong>Nemeth</strong>, the chart
-                                    summary is wrapped in <code>$$…$$</code> and a form feed places the
-                                    graphic on the following page; with <strong>UEB math</strong>, the
-                                    summary stays plain prose above the chart on the same page sequence.
+                                    used for the whole document. With <strong>Nemeth</strong>, numeric lines
+                                    use <code>$$…$$</code> blocks (kind and title stay literary), and a form
+                                    feed places the graphic on the following page; with{' '}
+                                    <strong>UEB math</strong>, the summary stays plain prose above the chart
+                                    on the same page sequence.
                                 </p>
                                 <div role="radiogroup" aria-label="Math braille code for LaTeX">
                                     <label
@@ -612,9 +614,10 @@ export function ChartGenerator({
                             <p style={{ fontSize: '0.88rem', opacity: 0.9, marginTop: 0 }}>
                                 {mathCode === 'nemeth' ? (
                                     <>
-                                        The text below is wrapped in <code>$$…$$</code> for Nemeth; the
-                                        chart starts on the next page after a form feed. LaTeX math
-                                        elsewhere uses Nemeth (set on step 2).
+                                        Nemeth layout below: kind and title lines are literary; grid, range,
+                                        axes, and each value pair use <code>$$…$$</code>. The chart starts on
+                                        the next page after a form feed. LaTeX math elsewhere uses Nemeth
+                                        (set on step 2).
                                     </>
                                 ) : (
                                     <>
