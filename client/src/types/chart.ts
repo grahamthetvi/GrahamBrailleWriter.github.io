@@ -8,8 +8,10 @@ export type ChartKind = 'line' | 'bar';
 /** Single-series chart (line or bar); multi-series can extend this later. */
 export interface ChartSpec {
   kind: ChartKind;
-  /** Y values; X is implicit index 0..n-1 */
+  /** Y value per point */
   values: number[];
+  /** X coordinate per point; same length as values (often 0..n-1 when only Y was entered). */
+  xValues: number[];
   cellsWidth: number;
   cellsHeight: number;
   /** Optional labels for accessibility / summary text (not yet drawn in bitmap Phase A–B). */
@@ -44,9 +46,19 @@ export function validateChartSpec(spec: ChartSpec): ChartValidationResult {
     errors.push(`Too many points (maximum ${CHART_LIMITS.maxPoints}).`);
   }
 
+  if (spec.values.length !== spec.xValues.length) {
+    errors.push('X and Y must have the same number of values.');
+  }
+
   spec.values.forEach((v, i) => {
     if (!Number.isFinite(v)) {
-      errors.push(`Invalid number at position ${i + 1}.`);
+      errors.push(`Invalid Y value at position ${i + 1}.`);
+    }
+  });
+
+  spec.xValues.forEach((v, i) => {
+    if (!Number.isFinite(v)) {
+      errors.push(`Invalid X value at position ${i + 1}.`);
     }
   });
 
@@ -106,4 +118,27 @@ export function parseCsvRows(csv: string): { values: number[]; rowCount: number;
     rowCount: rows.length - startRow,
     columnCount,
   };
+}
+
+/**
+ * Parse comma-separated numbers; empty segments are skipped. Non-numeric tokens are errors.
+ */
+export function parseCommaSeparatedNumbers(s: string): { numbers: number[]; errors: string[] } {
+  const trimmed = s.trim();
+  if (!trimmed) {
+    return { numbers: [], errors: [] };
+  }
+  const parts = trimmed.split(',').map((p) => p.trim());
+  const numbers: number[] = [];
+  const errors: string[] = [];
+  for (const part of parts) {
+    if (part === '') continue;
+    const n = parseFloat(part);
+    if (!Number.isFinite(n)) {
+      errors.push(`Invalid number: "${part}".`);
+    } else {
+      numbers.push(n);
+    }
+  }
+  return { numbers, errors };
 }

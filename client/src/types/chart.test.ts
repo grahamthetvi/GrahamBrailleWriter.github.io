@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { validateChartSpec, parseCsvRows, CHART_LIMITS } from './chart';
+import { validateChartSpec, parseCsvRows, parseCommaSeparatedNumbers, CHART_LIMITS } from './chart';
 import { buildChartSummaryPlainText } from '../utils/chartBraille';
 import type { ChartSpec } from './chart';
 
 function baseSpec(over: Partial<ChartSpec> = {}): ChartSpec {
     return {
         kind: 'line',
+        xValues: [0, 1, 2],
         values: [1, 2, 3],
         cellsWidth: 30,
         cellsHeight: 15,
@@ -21,7 +22,12 @@ describe('validateChartSpec', () => {
     });
 
     it('rejects empty values', () => {
-        const r = validateChartSpec(baseSpec({ values: [] }));
+        const r = validateChartSpec(baseSpec({ values: [], xValues: [] }));
+        expect(r.ok).toBe(false);
+    });
+
+    it('rejects mismatched x and y lengths', () => {
+        const r = validateChartSpec(baseSpec({ xValues: [0, 1] }));
         expect(r.ok).toBe(false);
     });
 
@@ -35,6 +41,19 @@ describe('validateChartSpec', () => {
     it('rejects out-of-range grid', () => {
         expect(validateChartSpec(baseSpec({ cellsWidth: 2 })).ok).toBe(false);
         expect(validateChartSpec(baseSpec({ cellsHeight: 2 })).ok).toBe(false);
+    });
+});
+
+describe('parseCommaSeparatedNumbers', () => {
+    it('parses comma-separated numbers', () => {
+        const { numbers, errors } = parseCommaSeparatedNumbers('1, 2, 3');
+        expect(errors).toHaveLength(0);
+        expect(numbers).toEqual([1, 2, 3]);
+    });
+
+    it('reports invalid tokens', () => {
+        const { errors } = parseCommaSeparatedNumbers('1, bad, 3');
+        expect(errors.length).toBeGreaterThan(0);
     });
 });
 
@@ -56,13 +75,14 @@ describe('buildChartSummaryPlainText', () => {
         const text = buildChartSummaryPlainText(
             baseSpec({
                 title: 'Test',
+                xValues: [0, 1],
                 values: [10, 20],
                 kind: 'bar',
             })
         );
         expect(text).toContain('Bar chart: Test');
-        expect(text).toContain('Values (index: value):');
-        expect(text).toContain('1: 10');
-        expect(text).toContain('2: 20');
+        expect(text).toContain('Values (x, y):');
+        expect(text).toContain('0: 10');
+        expect(text).toContain('1: 20');
     });
 });

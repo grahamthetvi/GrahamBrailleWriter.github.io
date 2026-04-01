@@ -9,6 +9,7 @@ import {
     CHART_LIMITS,
     validateChartSpec,
     parseCsvRows,
+    parseCommaSeparatedNumbers,
 } from '../types/chart';
 
 interface ChartGeneratorProps {
@@ -20,6 +21,7 @@ const STEPS = ['Data', 'Chart type and grid', 'Labels', 'Review'] as const;
 
 function buildSpecFromState(
     kind: ChartKind,
+    xValues: number[],
     values: number[],
     cellsWidth: number,
     cellsHeight: number,
@@ -29,6 +31,7 @@ function buildSpecFromState(
 ): ChartSpec {
     const spec: ChartSpec = {
         kind,
+        xValues,
         values,
         cellsWidth,
         cellsHeight,
@@ -48,8 +51,9 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
     const [cellsWidth, setCellsWidth] = useState(30);
     const [cellsHeight, setCellsHeight] = useState(15);
 
-    /** One string per row for controlled inputs (allows empty while editing). */
-    const [pointRows, setPointRows] = useState<string[]>(['', '', '']);
+    /** Comma-separated X and Y; empty X defaults to 0, 1, 2, … in buildDataFromInputs. */
+    const [dataXInput, setDataXInput] = useState('');
+    const [dataYInput, setDataYInput] = useState('');
     const [csvPaste, setCsvPaste] = useState('');
     const [title, setTitle] = useState('');
     const [xAxisLabel, setXAxisLabel] = useState('');
@@ -58,7 +62,7 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
     const [liveMessage, setLiveMessage] = useState('');
     const [fieldErrors, setFieldErrors] = useState<string[]>([]);
 
-    const firstFieldRef = useRef<HTMLInputElement>(null);
+    const firstFieldRef = useRef<HTMLTextAreaElement>(null);
 
     const announce = useCallback((msg: string) => {
         setLiveMessage(msg);
@@ -73,21 +77,38 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
         return () => window.removeEventListener('keydown', handleKey);
     }, [onClose]);
 
-    function parsePointValues(): number[] {
-        const out: number[] = [];
-        for (const raw of pointRows) {
-            const s = raw.trim();
-            if (s === '') continue;
-            const n = parseFloat(s);
-            if (!Number.isNaN(n)) out.push(n);
+    function buildDataFromInputs(): {
+        xValues: number[];
+        values: number[];
+        parseErrors: string[];
+    } {
+        const yParsed = parseCommaSeparatedNumbers(dataYInput);
+        const xParsed = parseCommaSeparatedNumbers(dataXInput);
+        const parseErrors = [...yParsed.errors, ...xParsed.errors];
+        const values = yParsed.numbers;
+        if (values.length === 0) {
+            return { xValues: [], values: [], parseErrors };
         }
-        return out;
+        let xValues: number[];
+        if (xParsed.numbers.length === 0) {
+            xValues = values.map((_, i) => i);
+        } else if (xParsed.numbers.length !== values.length) {
+            parseErrors.push(
+                `X has ${xParsed.numbers.length} number(s) and Y has ${values.length}. Counts must match, or leave X empty for 0, 1, 2, …`
+            );
+            xValues = [];
+        } else {
+            xValues = xParsed.numbers;
+        }
+        return { xValues, values, parseErrors };
     }
 
     function getSpecForValidation(): ChartSpec {
+        const { xValues, values } = buildDataFromInputs();
         return buildSpecFromState(
             chartType,
-            parsePointValues(),
+            xValues,
+            values,
             cellsWidth,
             cellsHeight,
             title,
@@ -99,16 +120,13 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
     function goNext() {
         setFieldErrors([]);
         if (step === 0) {
-            const values = parsePointValues();
-            const spec = buildSpecFromState(
-                chartType,
-                values,
-                cellsWidth,
-                cellsHeight,
-                title,
-                xAxisLabel,
-                yAxisLabel
-            );
+            const { values, parseErrors } = buildDataFromInputs();
+            if (parseErrors.length > 0) {
+                setFieldErrors(parseErrors);
+                announce(parseErrors.join(' '));
+                return;
+            }
+            const spec = getSpecForValidation();
             const v = validateChartSpec(spec);
             if (!v.ok) {
                 setFieldErrors(v.errors);
@@ -126,19 +144,59 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
     }
 
     function applyCsv() {
+        const lines = csvPaste
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+
+        const pairRows: { x: number; y: number }[] = [];
+        let everyLineIsTwoNumbers = lines.length > 0;
+
+        for (const line of lines) {
+            const cells = line.split(/[,;\t]/).map((c) => c.trim()).filter((c) => c !== '');
+            if (cells.length >= 2) {
+                const x = parseFloat(cells[0]);
+                const y = parseFloat(cells[1]);
+                if (Number.isFinite(x) && Number.isFinite(y)) {
+                    pairRows.push({ x, y });
+                } else {
+                    everyLineIsTwoNumbers = false;
+                }
+            } else {
+                everyLineIsTwoNumbers = false;
+            }
+        }
+
+        if (everyLineIsTwoNumbers && pairRows.length === lines.length) {
+            setDataXInput(pairRows.map((p) => String(p.x)).join(', '));
+            setDataYInput(pairRows.map((p) => String(p.y)).join(', '));
+            setFieldErrors([]);
+            announce(`${pairRows.length} points loaded (two columns: X, Y).`);
+            setCsvPaste('');
+            return;
+        }
+
         const { values, rowCount } = parseCsvRows(csvPaste);
         if (values.length === 0) {
             setFieldErrors(['No numbers found in pasted text.']);
             announce('No numbers found in pasted text.');
             return;
         }
-        setPointRows(values.map(String));
+        setDataXInput('');
+        setDataYInput(values.map(String).join(', '));
         setFieldErrors([]);
-        announce(`${values.length} points loaded from ${rowCount} rows.`);
+        announce(`${values.length} Y values loaded from ${rowCount} row(s). X left empty (0, 1, 2, …).`);
         setCsvPaste('');
     }
 
     function handleInsert() {
+        const { parseErrors } = buildDataFromInputs();
+        if (parseErrors.length > 0) {
+            setFieldErrors(parseErrors);
+            announce(parseErrors.join(' '));
+            setStep(0);
+            return;
+        }
         const spec = getSpecForValidation();
         const v = validateChartSpec(spec);
         if (!v.ok) {
@@ -260,121 +318,63 @@ export function ChartGenerator({ onInsert, onClose }: ChartGeneratorProps) {
 
                     {step === 0 && (
                         <div>
-                            <table
+                            <div style={{ marginBottom: '12px' }}>
+                                <label htmlFor="chart-data-x" style={labelStyle}>
+                                    X values (comma-separated, optional)
+                                </label>
+                                <textarea
+                                    id="chart-data-x"
+                                    rows={2}
+                                    value={dataXInput}
+                                    onChange={(e) => setDataXInput(e.target.value)}
+                                    placeholder="e.g. 1990, 2000, 2010 — or leave empty for 0, 1, 2, …"
+                                    aria-describedby="chart-data-x-hint"
                                     style={{
-                                        width: '100%',
-                                        borderCollapse: 'collapse',
-                                        marginBottom: '12px',
+                                        ...inputStyle,
+                                        fontFamily: 'monospace',
+                                        resize: 'vertical',
+                                    }}
+                                />
+                                <p
+                                    id="chart-data-x-hint"
+                                    style={{
+                                        margin: '6px 0 0 0',
+                                        fontSize: '0.82rem',
+                                        opacity: 0.85,
                                     }}
                                 >
-                                    <caption
-                                        style={{
-                                            textAlign: 'left',
-                                            fontWeight: 'bold',
-                                            marginBottom: '8px',
-                                        }}
-                                    >
-                                        Values (one number per row)
-                                    </caption>
-                                    <thead>
-                                        <tr>
-                                            <th
-                                                scope="col"
-                                                style={{
-                                                    textAlign: 'left',
-                                                    padding: '4px 8px',
-                                                    borderBottom: '1px solid var(--border-color)',
-                                                }}
-                                            >
-                                                #
-                                            </th>
-                                            <th
-                                                scope="col"
-                                                style={{
-                                                    textAlign: 'left',
-                                                    padding: '4px 8px',
-                                                    borderBottom: '1px solid var(--border-color)',
-                                                }}
-                                            >
-                                                Value
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {pointRows.map((row, i) => (
-                                            <tr key={i}>
-                                                <td
-                                                    style={{
-                                                        padding: '6px 8px',
-                                                        verticalAlign: 'middle',
-                                                        width: '2.5rem',
-                                                    }}
-                                                >
-                                                    {i + 1}
-                                                </td>
-                                                <td style={{ padding: '4px' }}>
-                                                    <input
-                                                        ref={i === 0 ? firstFieldRef : undefined}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        aria-label={`Value row ${i + 1}`}
-                                                        value={row}
-                                                        onChange={(e) => {
-                                                            const next = [...pointRows];
-                                                            next[i] = e.target.value;
-                                                            setPointRows(next);
-                                                        }}
-                                                        style={inputStyle}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: '8px',
-                                    marginBottom: '16px',
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    className="welcome-btn-secondary"
-                                    onClick={() => {
-                                        setPointRows([...pointRows, '']);
-                                        announce(`Row ${pointRows.length + 1} added.`);
+                                    If provided, must have the same count as Y. Empty uses 0, 1, 2, … in order.
+                                </p>
+                            </div>
+                            <div style={{ marginBottom: '12px' }}>
+                                <label htmlFor="chart-data-y" style={labelStyle}>
+                                    Y values (comma-separated)
+                                </label>
+                                <textarea
+                                    ref={firstFieldRef}
+                                    id="chart-data-y"
+                                    rows={3}
+                                    value={dataYInput}
+                                    onChange={(e) => setDataYInput(e.target.value)}
+                                    placeholder="e.g. 10, 25, 18"
+                                    style={{
+                                        ...inputStyle,
+                                        fontFamily: 'monospace',
+                                        resize: 'vertical',
                                     }}
-                                >
-                                    Add row
-                                </button>
-                                <button
-                                    type="button"
-                                    className="welcome-btn-secondary"
-                                    onClick={() => {
-                                        if (pointRows.length <= 1) {
-                                            announce('At least one row must remain.');
-                                            return;
-                                        }
-                                        setPointRows(pointRows.slice(0, -1));
-                                        announce('Last row removed.');
-                                    }}
-                                >
-                                    Remove last row
-                                </button>
+                                />
                             </div>
 
                             <div>
                                 <label htmlFor="chart-csv-paste" style={labelStyle}>
-                                    Optional: paste CSV (numbers separated by commas or new lines)
+                                    Optional: paste CSV — one Y per line, or two columns (X, Y) per line
                                 </label>
                                 <textarea
                                     id="chart-csv-paste"
                                     rows={3}
                                     value={csvPaste}
                                     onChange={(e) => setCsvPaste(e.target.value)}
-                                    placeholder="e.g. 10, 20, 30 or one value per line"
+                                    placeholder="e.g. 10, 20, 30 or two columns: 1, 10 / 2, 20"
                                     style={{
                                         ...inputStyle,
                                         fontFamily: 'monospace',

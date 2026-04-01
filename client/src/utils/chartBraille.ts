@@ -103,12 +103,33 @@ export class GridCanvas {
     }
 }
 
+function domainMinMax(data: number[]): { min: number; max: number } {
+    const min = Math.min(...data);
+    let max = Math.max(...data);
+    if (min === max) {
+        max = min + 1;
+    }
+    return { min, max };
+}
+
+function scaleXtoPixel(x: number, xMin: number, xMax: number, drawW: number): number {
+    if (xMax === xMin) {
+        return 1 + Math.floor(drawW / 2);
+    }
+    return 1 + Math.round(((x - xMin) / (xMax - xMin)) * drawW);
+}
+
 /** Full chart BRF from a validated ChartSpec (single series). */
 export function generateChartBrf(spec: ChartSpec): string {
     if (spec.kind === 'line') {
-        return generateLineChart(spec.values, spec.cellsWidth, spec.cellsHeight);
+        return generateLineChart(
+            spec.xValues,
+            spec.values,
+            spec.cellsWidth,
+            spec.cellsHeight
+        );
     }
-    return generateBarChart(spec.values, spec.cellsWidth, spec.cellsHeight);
+    return generateBarChart(spec.xValues, spec.values, spec.cellsWidth, spec.cellsHeight);
 }
 
 /**
@@ -144,16 +165,22 @@ export function buildChartSummaryPlainText(spec: ChartSpec): string {
         lines.push(parts.join('. ') + '.');
     }
 
-    lines.push('Values (index: value):');
+    const xv = spec.xValues;
+    lines.push('Values (x, y):');
     v.forEach((n, i) => {
-        lines.push(`  ${i + 1}: ${n}`);
+        lines.push(`  ${xv[i]}: ${n}`);
     });
 
     return lines.join('\n');
 }
 
-export function generateLineChart(data: number[], cellsWidth: number, cellsHeight: number): string {
-    if (data.length === 0) return '';
+export function generateLineChart(
+    xData: number[],
+    yData: number[],
+    cellsWidth: number,
+    cellsHeight: number
+): string {
+    if (yData.length === 0 || xData.length !== yData.length) return '';
     // Use a minimum of 2x2 cells
     cellsWidth = Math.max(2, cellsWidth);
     cellsHeight = Math.max(2, cellsHeight);
@@ -164,19 +191,14 @@ export function generateLineChart(data: number[], cellsWidth: number, cellsHeigh
     canvas.drawLine(0, 0, 0, canvas.height - 1);
     canvas.drawLine(0, canvas.height - 1, canvas.width - 1, canvas.height - 1);
 
-    const minYield = Math.min(...data);
-    let maxYield = Math.max(...data);
-    if (minYield === maxYield) {
-        maxYield += 1;
-    }
+    const { min: minYield, max: maxYield } = domainMinMax(yData);
+    const { min: minX, max: maxX } = domainMinMax(xData);
 
     const drawW = canvas.width - 2;
     const drawH = canvas.height - 2;
 
-    const stepX = drawW / Math.max(1, data.length - 1);
-
-    const points = data.map((val, i) => {
-        const x = 1 + Math.round(i * stepX);
+    const points = yData.map((val, i) => {
+        const x = scaleXtoPixel(xData[i], minX, maxX, drawW);
         const yNorm = (val - minYield) / (maxYield - minYield);
         const y = (canvas.height - 2) - Math.round(yNorm * drawH);
         return { x, y };
@@ -189,8 +211,13 @@ export function generateLineChart(data: number[], cellsWidth: number, cellsHeigh
     return canvas.renderToBRF();
 }
 
-export function generateBarChart(data: number[], cellsWidth: number, cellsHeight: number): string {
-    if (data.length === 0) return '';
+export function generateBarChart(
+    xData: number[],
+    yData: number[],
+    cellsWidth: number,
+    cellsHeight: number
+): string {
+    if (yData.length === 0 || xData.length !== yData.length) return '';
     cellsWidth = Math.max(2, cellsWidth);
     cellsHeight = Math.max(2, cellsHeight);
 
@@ -200,24 +227,32 @@ export function generateBarChart(data: number[], cellsWidth: number, cellsHeight
     canvas.drawLine(0, 0, 0, canvas.height - 1);
     canvas.drawLine(0, canvas.height - 1, canvas.width - 1, canvas.height - 1);
 
-    const maxYield = Math.max(...data, 1);
+    const maxYield = Math.max(...yData, 1);
 
     const drawW = canvas.width - 2;
     const drawH = canvas.height - 2;
 
-    const barAreaWidth = drawW / data.length;
-    // Leave some space between bars if possible
-    const barWidth = Math.max(1, Math.floor(barAreaWidth * 0.8));
+    const { min: minX, max: maxX } = domainMinMax(xData);
 
-    data.forEach((val, i) => {
-        // Center the bar in its segment
-        const xStart = 1 + Math.round(i * barAreaWidth + (barAreaWidth - barWidth) / 2);
-        const yNorm = Math.max(0, val / maxYield); // Don't let negative logic break it
+    const xPixels = xData.map((xv) => scaleXtoPixel(xv, minX, maxX, drawW));
+    const sortedPx = [...xPixels].sort((a, b) => a - b);
+    let minGap = drawW;
+    for (let i = 1; i < sortedPx.length; i++) {
+        minGap = Math.min(minGap, sortedPx[i] - sortedPx[i - 1]);
+    }
+    if (sortedPx.length <= 1) minGap = drawW;
+    const barWidth = Math.max(1, Math.floor(Math.min(drawW / (2 * yData.length), minGap * 0.45)));
+
+    yData.forEach((val, i) => {
+        const cx = xPixels[i];
+        const xStart = Math.max(1, cx - Math.floor(barWidth / 2));
+        const xEnd = Math.min(canvas.width - 2, xStart + barWidth - 1);
+        const yNorm = Math.max(0, val / maxYield);
         const barH = Math.round(yNorm * drawH);
         const yEnd = canvas.height - 2;
         const yStart = yEnd - barH;
 
-        for (let x = xStart; x < xStart + barWidth; x++) {
+        for (let x = xStart; x <= xEnd; x++) {
             canvas.drawLine(x, yStart, x, yEnd);
         }
     });
