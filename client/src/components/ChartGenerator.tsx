@@ -241,8 +241,12 @@ export function ChartGenerator({
             return;
         }
         const brf = generateChartBrf(spec);
-        const summary = buildChartSummaryPlainText(spec);
-        const block = `${summary}\n\n:::chart\n${brf}\n:::\n`;
+        let summary = buildChartSummaryPlainText(spec);
+        if (mathCode === 'nemeth') {
+            summary = `$$${summary}$$`;
+        }
+        const pageBreakBeforeChart = mathCode === 'nemeth' ? '\n\n\f\n\n' : '\n\n';
+        const block = `${summary}${pageBreakBeforeChart}:::chart\n${brf}\n:::\n`;
         onInsert(block);
     }
 
@@ -250,7 +254,9 @@ export function ChartGenerator({
     const reviewValidation = validateChartSpec(reviewSpec);
     const reviewSummaryPreview =
         reviewValidation.ok && reviewSpec.values.length > 0
-            ? buildChartSummaryPlainText(reviewSpec)
+            ? mathCode === 'nemeth'
+                ? `$$${buildChartSummaryPlainText(reviewSpec)}$$`
+                : buildChartSummaryPlainText(reviewSpec)
             : '';
 
     const inputStyle: CSSProperties = {
@@ -503,8 +509,10 @@ export function ChartGenerator({
                                 >
                                     Applies when the editor translates <code>$$…$$</code> and{' '}
                                     <code>{`\\(`}…{`\\)`}</code>. This choice is saved for the app and
-                                    used for the whole document. The chart summary above the graphic is
-                                    plain text and uses your literary table like other prose.
+                                    used for the whole document. With <strong>Nemeth</strong>, the chart
+                                    summary is wrapped in <code>$$…$$</code> and a form feed places the
+                                    graphic on the following page; with <strong>UEB math</strong>, the
+                                    summary stays plain prose above the chart on the same page sequence.
                                 </p>
                                 <div role="radiogroup" aria-label="Math braille code for LaTeX">
                                     <label
@@ -602,11 +610,19 @@ export function ChartGenerator({
                                 Review — text summary to insert
                             </h3>
                             <p style={{ fontSize: '0.88rem', opacity: 0.9, marginTop: 0 }}>
-                                Plain English below will appear above the tactile chart and will be
-                                translated with your literary table like the rest of the document.
-                                LaTeX math in the file uses{' '}
-                                <strong>{mathCode === 'nemeth' ? 'Nemeth' : 'UEB math'}</strong> (set on
-                                step 2).
+                                {mathCode === 'nemeth' ? (
+                                    <>
+                                        The text below is wrapped in <code>$$…$$</code> for Nemeth; the
+                                        chart starts on the next page after a form feed. LaTeX math
+                                        elsewhere uses Nemeth (set on step 2).
+                                    </>
+                                ) : (
+                                    <>
+                                        Plain English below will appear above the tactile chart and will be
+                                        translated with your literary table like the rest of the document.
+                                        LaTeX math in the file uses UEB math (set on step 2).
+                                    </>
+                                )}
                             </p>
                             {reviewValidation.ok && reviewSummaryPreview ? (
                                 <pre

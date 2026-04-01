@@ -300,6 +300,13 @@ function translateTextPreservingNewlines(text: string, table: string): string {
   }).join('\n');
 }
 
+/** Form feeds separate logical blocks; translate each slice and rejoin (see chart insert). */
+function translateTextPreservingNewlinesAndFormFeeds(text: string, table: string): string {
+  if (!text) return '';
+  if (!text.includes('\f')) return translateTextPreservingNewlines(text, table);
+  return text.split('\f').map((part) => translateTextPreservingNewlines(part, table)).join('\f');
+}
+
 /**
  * Back-translates ASCII BRF line-by-line so newlines match the source file.
  * Grade 2 / contractions are not guaranteed to round-trip to the original prose.
@@ -386,7 +393,7 @@ async function translateDocumentWithMath(text: string, textTable: string, mathCo
     // Translate the text *before* the match
     const textBefore = text.slice(lastIndex, match.index);
     if (textBefore) {
-      result += translateTextPreservingNewlines(textBefore, textTable);
+      result += translateTextPreservingNewlinesAndFormFeeds(textBefore, textTable);
     }
 
     if (match[5] !== undefined) {
@@ -408,7 +415,7 @@ async function translateDocumentWithMath(text: string, textTable: string, mathCo
   // Translate any remaining text after the last math block
   const remainingText = text.slice(lastIndex);
   if (remainingText) {
-    result += translateTextPreservingNewlines(remainingText, textTable);
+    result += translateTextPreservingNewlinesAndFormFeeds(remainingText, textTable);
   }
 
   return result;

@@ -468,17 +468,16 @@ function toBrailleNumber(num: number): string {
 }
 
 /**
- * Formats a Unicode braille string into an array of page strings for display.
- * Each page contains at most linesPerPage lines; each line is at most cellsPerRow
- * characters wide. Lines that exceed cellsPerRow are word-wrapped — whole braille
- * words move to the next line. Only words longer than cellsPerRow are hard-broken.
+ * One segment of Unicode braille (no form feeds). `firstPageNumber` is the 1-based
+ * label for the first page of this segment when page numbers are shown.
  */
-export function formatBrfPages(
+function formatBrfPagesSegment(
   unicodeBraille: string,
   cellsPerRow: number,
   linesPerPage: number,
-  includePageNumbers: boolean = false,
-  paragraphStarts?: ParagraphLineStarts,
+  includePageNumbers: boolean,
+  paragraphStarts: ParagraphLineStarts | undefined,
+  firstPageNumber: number,
 ): string[] {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
@@ -524,13 +523,58 @@ export function formatBrfPages(
       while (chunk.length < contentLines) {
         chunk.push('');
       }
-      const pageNumStr = toBrailleNumber(Math.floor(i / contentLines) + 1);
+      const pageNumStr = toBrailleNumber(firstPageNumber + Math.floor(i / contentLines));
       const unicodePageNum = pageNumStr.split('').map(c => String.fromCharCode(c.charCodeAt(0) - 0x20 + 0x2800)).join('');
       chunk.push(unicodePageNum.padStart(cells, BRAILLE_SPACE));
     }
     pages.push(chunk.join('\n'));
   }
   return pages;
+}
+
+/**
+ * Formats a Unicode braille string into an array of page strings for display.
+ * Each page contains at most linesPerPage lines; each line is at most cellsPerRow
+ * characters wide. Lines that exceed cellsPerRow are word-wrapped — whole braille
+ * words move to the next line. Only words longer than cellsPerRow are hard-broken.
+ *
+ * Form feed (`\f`) starts a new pagination block: content after each `\f` begins on a
+ * new page sequence (e.g. chart after summary).
+ */
+export function formatBrfPages(
+  unicodeBraille: string,
+  cellsPerRow: number,
+  linesPerPage: number,
+  includePageNumbers: boolean = false,
+  paragraphStarts?: ParagraphLineStarts,
+): string[] {
+  if (!unicodeBraille.includes('\f')) {
+    return formatBrfPagesSegment(
+      unicodeBraille,
+      cellsPerRow,
+      linesPerPage,
+      includePageNumbers,
+      paragraphStarts,
+      1,
+    );
+  }
+
+  const segments = unicodeBraille.split('\f');
+  const allPages: string[] = [];
+  let nextPageNum = 1;
+  for (const seg of segments) {
+    const pages = formatBrfPagesSegment(
+      seg,
+      cellsPerRow,
+      linesPerPage,
+      includePageNumbers,
+      paragraphStarts,
+      nextPageNum,
+    );
+    nextPageNum += pages.length;
+    allPages.push(...pages);
+  }
+  return allPages.length > 0 ? allPages : [''];
 }
 
 /**
@@ -571,13 +615,14 @@ export function formatPlainTextForPrintDownload(editorContent: string): string {
  * form-feed characters (0x0C), and uses CRLF line endings as required
  * by most embosser drivers.
  */
-export function formatBrfForOutput(
+function formatBrfForOutputSegment(
   rawBrf: string,
   cellsPerRow: number,
   linesPerPage: number,
-  includePageNumbers: boolean = false,
-  paragraphStarts?: ParagraphLineStarts,
-): string {
+  includePageNumbers: boolean,
+  paragraphStarts: ParagraphLineStarts | undefined,
+  firstPageNumber: number,
+): string[] {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
 
@@ -617,12 +662,53 @@ export function formatBrfForOutput(
       while (chunk.length < contentLines) {
         chunk.push('');
       }
-      const pageNumStr = toBrailleNumber(Math.floor(i / contentLines) + 1);
+      const pageNumStr = toBrailleNumber(firstPageNumber + Math.floor(i / contentLines));
       chunk.push(pageNumStr.padStart(cells, ' '));
     }
     pageChunks.push(chunk.join('\r\n'));
   }
 
-  // Join pages with form feed; add trailing CRLF
-  return pageChunks.join('\r\n\f') + '\r\n';
+  return pageChunks;
+}
+
+/**
+ * Form feed (`\f`) in the raw BRF starts a new pagination block before resuming
+ * line-based paging.
+ */
+export function formatBrfForOutput(
+  rawBrf: string,
+  cellsPerRow: number,
+  linesPerPage: number,
+  includePageNumbers: boolean = false,
+  paragraphStarts?: ParagraphLineStarts,
+): string {
+  if (!rawBrf.includes('\f')) {
+    const one = formatBrfForOutputSegment(
+      rawBrf,
+      cellsPerRow,
+      linesPerPage,
+      includePageNumbers,
+      paragraphStarts,
+      1,
+    );
+    return one.join('\r\n\f') + '\r\n';
+  }
+
+  const segments = rawBrf.split('\f');
+  const allChunks: string[] = [];
+  let nextPageNum = 1;
+  for (const seg of segments) {
+    const pageChunks = formatBrfForOutputSegment(
+      seg,
+      cellsPerRow,
+      linesPerPage,
+      includePageNumbers,
+      paragraphStarts,
+      nextPageNum,
+    );
+    nextPageNum += pageChunks.length;
+    allChunks.push(...pageChunks);
+  }
+
+  return allChunks.join('\r\n\f') + '\r\n';
 }
