@@ -47,23 +47,94 @@ function lineLenFromSpans(spans: BrailleWordSpan[], spaceLen: number): number {
   return len;
 }
 
-/** Largest-remainder split of `n` items across buckets proportional to `weights`. */
-function splitIntegerByWeights(n: number, weights: number[]): number[] {
-  const total = weights.reduce((a, b) => a + b, 0);
-  if (weights.length === 0) return [];
-  if (n === 0) return weights.map(() => 0);
-  if (total <= 0) {
-    const base = Math.floor(n / weights.length);
-    const out = weights.map(() => base);
-    for (let i = 0; i < n - base * weights.length; i++) out[i]++;
-    return out;
+/** True if s.slice(0, p) and s.slice(p) do not split a word (cut is at whitespace gap). */
+function isWordBoundaryCut(s: string, p: number): boolean {
+  const L = s.length;
+  if (p <= 0) return p === 0;
+  if (p >= L) return p === L;
+  const left = s[p - 1];
+  const right = s[p];
+  return left === ' ' || right === ' ';
+}
+
+/**
+ * Exclusive cut index p: first segment is s.slice(0, p). Prefers word boundaries; on equal
+ * distance prefers a larger p so more words stay on earlier rows. Minimizes |p - ideal| in [low, high].
+ */
+function snapCutToWordBoundary(s: string, ideal: number, low: number, high: number): number {
+  const L = s.length;
+  const lo = Math.max(low, 0);
+  const hi = Math.min(high, L);
+  if (lo > hi) return Math.min(lo, L);
+
+  let best = Math.max(lo, Math.min(hi, ideal));
+  let bestDist = Infinity;
+  for (let d = 0; d <= L; d++) {
+    for (const sign of d === 0 ? [0] : [-1, 1]) {
+      const p = ideal + sign * d;
+      if (p < lo || p > hi) continue;
+      if (!isWordBoundaryCut(s, p)) continue;
+      const dist = Math.abs(p - ideal);
+      if (dist < bestDist || (dist === bestDist && p > best)) {
+        bestDist = dist;
+        best = p;
+      }
+    }
+    if (bestDist === 0) break;
   }
-  const raw = weights.map(w => (n * w) / total);
-  const floors = raw.map(r => Math.floor(r));
-  let rem = n - floors.reduce((a, b) => a + b, 0);
-  const order = raw.map((r, i) => ({ i, f: r - Math.floor(r) })).sort((a, b) => b.f - a.f);
-  for (let k = 0; k < rem; k++) floors[order[k].i]++;
-  return floors;
+  if (bestDist < Infinity) return best;
+  return Math.max(lo, Math.min(hi, ideal));
+}
+
+/**
+ * When braille token count ≠ source word count, split `srcJoined` into one segment per
+ * physical braille row using cumulative braille weights (character-proportional), snapping
+ * cuts to spaces so words are not split mid-token when possible.
+ */
+function splitSrcJoinedByBrailleWeights(srcJoined: string, lineWeights: number[]): string[] {
+  const nLines = lineWeights.length;
+  const L = srcJoined.length;
+  if (nLines <= 0) return [];
+  if (nLines === 1) return [srcJoined.trimEnd()];
+
+  const W = lineWeights.reduce((a, b) => a + b, 0);
+  if (W <= 0 || L === 0) {
+    return Array.from({ length: nLines }, (_, i) => (i === 0 ? srcJoined : ''));
+  }
+
+  const cuts: number[] = [0];
+  let cum = 0;
+
+  for (let i = 0; i < nLines - 1; i++) {
+    cum += lineWeights[i];
+    const low = cuts[i] + 1;
+    const high = L - (nLines - 1 - i);
+    if (low > high) {
+      cuts.push(low);
+      continue;
+    }
+    const ideal = Math.round((cum / W) * L);
+    const clamped = Math.max(low, Math.min(high, ideal));
+    let t = snapCutToWordBoundary(srcJoined, clamped, low, high);
+    if (t <= cuts[i]) t = low;
+    cuts.push(t);
+  }
+  cuts.push(L);
+
+  for (let k = 1; k < cuts.length - 1; k++) {
+    if (cuts[k] <= cuts[k - 1]) cuts[k] = cuts[k - 1] + 1;
+  }
+  if (cuts[cuts.length - 1] !== L) cuts[cuts.length - 1] = L;
+  for (let k = cuts.length - 2; k >= 1; k--) {
+    if (cuts[k] >= cuts[k + 1]) cuts[k] = Math.max(cuts[k - 1] + 1, cuts[k + 1] - 1);
+  }
+
+  const out: string[] = [];
+  for (let i = 0; i < nLines; i++) {
+    const raw = srcJoined.slice(cuts[i], cuts[i + 1] ?? L);
+    out.push(raw.trim());
+  }
+  return out;
 }
 
 function mapBrailleWordIndexToSrcWordIndex(brailleWordIndex: number, mBrailleWords: number, nSrcWords: number): number {
@@ -307,15 +378,8 @@ function syncPlainLineToBrailleWrap(
     return Math.max(1, w);
   });
 
-  const counts = splitIntegerByWeights(n, lineWeights);
-  const outLines: string[] = [];
-  let offset = 0;
-  for (let li = 0; li < physical.length; li++) {
-    const take = counts[li] ?? 0;
-    const slice = srcWords.slice(offset, offset + take);
-    offset += take;
-    outLines.push(slice.join(' '));
-  }
+  const srcJoined = srcWords.join(' ');
+  const outLines = splitSrcJoinedByBrailleWeights(srcJoined, lineWeights);
   return leadingSpace + outLines.join(SOFT_LINE_BREAK_CHAR) + trailingSpace;
 }
 
