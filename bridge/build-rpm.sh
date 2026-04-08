@@ -9,7 +9,7 @@ echo "Setting up RPM build environment..."
 RPM_ROOT="$DIR/rpmbuild"
 mkdir -p "$RPM_ROOT"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-VERSION="1.0"
+VERSION="3.1"
 SOURCE_DIR="graham-bridge-$VERSION"
 
 # Create source tarball containing the pre-compiled binary
@@ -25,7 +25,7 @@ cd "$DIR"
 # Generate spec file
 cat << 'EOF' > "$RPM_ROOT/SPECS/graham-bridge.spec"
 Name:           graham-bridge
-Version:        1.0
+Version:        3.1
 Release:        1%{?dist}
 Summary:        Graham Braille Editor Bridge
 License:        MIT
@@ -71,8 +71,8 @@ install -D -p -m 644 tray_icon.png $RPM_BUILD_ROOT/%{_datadir}/icons/hicolor/128
 %{_datadir}/icons/hicolor/128x128/apps/graham-bridge.png
 
 %changelog
-* Wed Apr 08 2026 Graham The TVI - 1.0-1
-- Initial RPM release using pre-compiled binary
+* Wed Apr 08 2026 Graham The TVI - 3.1-1
+- Update to version 3.1
 EOF
 
 # Build the RPM
