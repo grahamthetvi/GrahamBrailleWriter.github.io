@@ -71,7 +71,24 @@ export async function checkBridgeStatus(): Promise<boolean> {
     const res = await fetch(`${BRIDGE_BASE}/status`, {
       signal: AbortSignal.timeout(2_000),
     });
-    return res.ok;
+    if (!res.ok) return false;
+
+    // Parse the response to ensure we are actually talking to the Graham Bridge
+    // and not another local service (e.g. webpack dev server) running on 8080.
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (data && data.status === 'ok') {
+        if (data.app) {
+          return data.app === 'graham-bridge';
+        }
+        // Fallback for older bridge binaries that only returned {"status":"ok"}
+        return true;
+      }
+      return false;
+    } catch {
+      return false; // Not JSON or invalid format
+    }
   } catch {
     return false;
   }
