@@ -92,7 +92,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok","app":"graham-bridge","version":"3.2.2"}`))
+	_, _ = w.Write([]byte(`{"status":"ok","app":"graham-bridge","version":"3.3.0"}`))
 }
 
 // printRequest is the JSON body for the /print endpoint.

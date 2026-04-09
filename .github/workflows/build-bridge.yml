@@ -138,7 +138,8 @@ jobs:
             | 🍎 macOS | `graham-bridge-macos.zip` → open `Graham Bridge.app` |
 
             ### What's New
-            - **${{ github.ref_name }}:** Fedora RPM asset `graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm` (version matches tag); `/status` reports `${{ steps.meta.outputs.semver }}`
+            - **v3.3.0:** Debug dashboard themes (dark / light / high contrast) match Graham Braille Editor; macOS bundle version aligned
+            - **${{ github.ref_name }}:** Fedora RPM `graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm`; `/status` → `"version":"${{ steps.meta.outputs.semver }}"`
             - **RPM:** Fedora/RHEL-family `dnf` install; RPM package name remains `graham-bridge`
             - **v3.2.1:** Debug dashboard shows Live immediately (SSE stream opens even before the first print job)
             - Debug dashboard at `http://localhost:8080/debug` — live print job log, BRF text preview, hex dump, printer list, and test print button
