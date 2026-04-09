@@ -1,5 +1,5 @@
 Name:           graham-bridge
-Version:        1.0
+Version:        3.1
 Release:        1%{?dist}
 Summary:        Graham Braille Editor Bridge
 License:        MIT
@@ -27,7 +27,15 @@ sed -i 's/Icon=printer/Icon=graham-bridge/' graham-bridge.desktop
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -D -p -m 755 bridge-linux-amd64 $RPM_BUILD_ROOT/%{_bindir}/graham-bridge
+if [ -f graham-bridge-linux-amd64 ]; then
+    BIN_NAME="graham-bridge-linux-amd64"
+elif [ -f bridge-linux-amd64 ]; then
+    BIN_NAME="bridge-linux-amd64"
+else
+    echo "Could not find linux binary"
+    exit 1
+fi
+install -D -p -m 755 $BIN_NAME $RPM_BUILD_ROOT/%{_bindir}/graham-bridge
 install -D -p -m 644 graham-bridge.desktop $RPM_BUILD_ROOT/%{_datadir}/applications/graham-bridge.desktop
 install -D -p -m 644 tray_icon.png $RPM_BUILD_ROOT/%{_datadir}/icons/hicolor/128x128/apps/graham-bridge.png
 
@@ -37,5 +45,5 @@ install -D -p -m 644 tray_icon.png $RPM_BUILD_ROOT/%{_datadir}/icons/hicolor/128
 %{_datadir}/icons/hicolor/128x128/apps/graham-bridge.png
 
 %changelog
-* Wed Apr 08 2026 Graham The TVI - 1.0-1
-- Initial RPM release using pre-compiled binary
+* Wed Apr 08 2026 Graham The TVI - 3.1-1
+- Update to version 3.1
