@@ -178,6 +178,16 @@ export function PrintPanel({
         >
           {status === 'printing' ? 'Sending…' : useWebUSB ? 'Select & Print (USB)' : 'Print'}
         </button>
+        {bridgeConnected && !useWebUSB && (
+          <button
+            className="toolbar-btn"
+            onClick={() => window.open('http://127.0.0.1:8080/debug', '_blank')}
+            title="Open Bridge Debug Dashboard"
+            style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
+          >
+            Debug
+          </button>
+        )}
         {renderViewPlusNotice()}
         {status === 'success' && (
           <span className="print-status-ok" aria-live="polite">✓ Sent</span>
@@ -237,12 +247,23 @@ export function PrintPanel({
         {renderViewPlusNotice()}
       </div>
 
-      <button
-        onClick={handlePrint}
-        disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
-      >
-        {status === 'printing' ? 'Printing...' : useWebUSB ? 'Select Embosser & Print' : 'Print'}
-      </button>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button
+          onClick={handlePrint}
+          disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
+        >
+          {status === 'printing' ? 'Printing...' : useWebUSB ? 'Select Embosser & Print' : 'Print'}
+        </button>
+        
+        {bridgeConnected && !useWebUSB && (
+          <button
+            onClick={() => window.open('http://127.0.0.1:8080/debug', '_blank')}
+            style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+          >
+            Debug Dashboard
+          </button>
+        )}
+      </div>
 
       {status === 'success' && (
         <p className="status-ok" aria-live="polite">Sent to embosser successfully.</p>
