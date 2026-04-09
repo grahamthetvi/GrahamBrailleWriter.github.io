@@ -33,18 +33,46 @@ const listenAddr = "127.0.0.1:8080"
 
 func withCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Allow any origin — the server is localhost-only, so this is safe.
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		
-		// Needed for Chrome Private Network Access (PNA)
-		// Allows public websites (like GitHub Pages) to fetch from this localhost bridge
-		w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		origin := r.Header.Get("Origin")
+
+		// Only allow specific trusted origins to prevent Cross-Site Request Forgery (CSRF). 
+		// An empty string origin ("") is often sent for same-origin requests or curl commands.
+		allowedOrigins := map[string]bool{
+			"https://grahamthetvi.github.io":      true,
+			"https://grahambrailleeditor.com":     true,
+			"https://www.grahambrailleeditor.com": true,
+			"http://localhost:5173":               true,
+			"http://127.0.0.1:5173":               true,
+			"http://localhost:8080":               true,
+			"http://127.0.0.1:8080":               true,
+			"":                                    true,
+		}
+
+		if allowedOrigins[origin] {
+			if origin == "" {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			// Needed for Chrome Private Network Access (PNA)
+			w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		}
 
 		// Handle pre-flight
 		if r.Method == http.MethodOptions {
+			if !allowedOrigins[origin] {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Actively refuse unauthorized requests at the server level
+		if !allowedOrigins[origin] {
+			http.Error(w, "Forbidden: origin not allowed", http.StatusForbidden)
 			return
 		}
 
@@ -79,6 +107,9 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	// Enforce a 5 MB limit on the request body to prevent memory exhaustion DOS attacks
+	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
 
 	var req printRequest
 	dec := json.NewDecoder(r.Body)
@@ -177,7 +208,7 @@ func onReady() {
 			case <-mDebug.ClickedCh:
 				openBrowser("http://" + listenAddr + "/debug")
 			case <-mOpen.ClickedCh:
-				openBrowser("https://grahamthetvi.github.io/Graham_Braille_Editor/")
+				openBrowser("https://grahambrailleeditor.com/")
 			case <-mQuit.ClickedCh:
 				systray.Quit()
 			}

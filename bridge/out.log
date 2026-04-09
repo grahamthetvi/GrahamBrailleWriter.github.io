@@ -1,0 +1,3 @@
+2026/04/08 19:37:47 Graham Bridge listening on http://127.0.0.1:8080
+2026/04/08 19:37:47 server error: listen tcp 127.0.0.1:8080: bind: address already in use
+exit status 1

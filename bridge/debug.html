@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Graham Bridge – Debug</title>
+<style>
+:root {
+  --bg:#0f1117; --surface:#1a1d27; --border:#2a2d3a;
+  --primary:#6c8eff; --success:#4caf7d; --danger:#f55;
+  --text:#e0e4f0; --muted:#7a7f99;
+  --mono:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+header h1{font-size:1.05rem;font-weight:700}
+header h1 span{color:var(--primary)}
+.badge{font-size:.7rem;background:var(--success);color:#000;padding:2px 8px;border-radius:999px;font-weight:700;transition:background .3s}
+.badge.offline{background:var(--danger);color:#fff}
+.badge.connecting{background:#777;color:#fff}
+.status-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--border);font-size:.78rem;color:var(--muted);flex-shrink:0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0;transition:background .3s}
+.dot.offline{background:var(--danger)}
+.dot.connecting{background:#aaa}
+main{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;flex:1;overflow:hidden;background:var(--border)}
+section{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.sh{background:var(--surface);padding:8px 14px;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sb{flex:1;overflow:auto;padding:10px}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th{color:var(--muted);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.ok{color:var(--success);font-weight:700}
+.err{color:var(--danger);font-weight:700}
+.ts{color:var(--muted);font-size:.73rem;font-family:var(--mono);white-space:nowrap}
+.pc{color:var(--primary);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bc{color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.printer-list{list-style:none}
+.printer-list li{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:.82rem;display:flex;align-items:center;gap:8px;transition:background .12s}
+.printer-list li:hover{background:var(--surface)}
+.printer-list li.sel{background:rgba(108,142,255,.15);color:var(--primary)}
+.test-btn{margin:10px;padding:9px 18px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:.82rem;transition:opacity .15s;flex-shrink:0}
+.test-btn:hover{opacity:.85}
+.test-btn:disabled{opacity:.35;cursor:not-allowed}
+.mono-box{font-family:var(--mono);font-size:.75rem;white-space:pre;line-height:1.65;color:var(--text)}
+.hex-box{font-family:var(--mono);font-size:.7rem;white-space:pre;line-height:1.75;color:var(--primary)}
+.empty{color:var(--muted);font-size:.82rem;text-align:center;padding:36px 20px}
+.ref-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:2px 9px;border-radius:4px;cursor:pointer;font-size:.72rem}
+.ref-btn:hover{border-color:var(--primary);color:var(--primary)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🖨 <span>Graham</span> Bridge — Debug Dashboard</h1>
+  <span class="badge connecting" id="badge">CONNECTING</span>
+</header>
+<div style="background:var(--surface); padding: 12px 20px; border-bottom:1px solid var(--border); font-size: 0.85rem">
+  <strong>Secret Pairing Token:</strong> <code style="background:var(--bg); padding:4px 8px; border-radius:4px; font-family:var(--mono); border:1px solid var(--border); margin-left: 8px;">brg_dac3f8933cd2c3278a5ba556f7346597</code>
+  <br><br><span style="color:var(--muted); font-size: 0.75rem;">Copy this token and paste it into the Web Editor settings. This protects your Braille Embosser from unauthorized background printing.</span>
+</div>
+<div class="status-bar">
+  <div class="dot connecting" id="dot"></div>
+  <span id="status-txt">Connecting to event stream…</span>
+</div>
+<main>
+
+<!-- ── Print Job Log ── -->
+<section>
+  <div class="sh">
+    <span>Print Job Log</span>
+    <span id="job-count" style="color:var(--text);font-size:.8rem">0 jobs</span>
+  </div>
+  <div class="sb" id="log-sb">
+    <div class="empty" id="log-empty">No print jobs received yet.<br>Send a job from the web app.</div>
+    <table id="log-tbl" style="display:none">
+      <thead><tr><th>#</th><th>Time</th><th>Printer</th><th>Bytes</th><th>Result</th></tr></thead>
+      <tbody id="log-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Printer List + Test ── -->
+<section>
+  <div class="sh">
+    <span>Available Printers</span>
+    <button class="ref-btn" onclick="loadPrinters()">↻ Refresh</button>
+  </div>
+  <div class="sb" id="printer-sb">
+    <div class="empty" id="printer-empty">Loading…</div>
+    <ul class="printer-list" id="printer-ul" style="display:none"></ul>
+  </div>
+  <button class="test-btn" id="test-btn" onclick="sendTest()" disabled>
+    🧪 Send Test Page to Selected Printer
+  </button>
+</section>
+
+<!-- ── BRF Text ── -->
+<section>
+  <div class="sh"><span>BRF Text — last job</span></div>

@@ -1,0 +1,9 @@
+HTTP/1.1 401 Unauthorized
+Access-Control-Allow-Headers: Content-Type, X-Bridge-Token, Authorization
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Thu, 09 Apr 2026 00:38:36 GMT
+Content-Length: 54
+
+Unauthorized: Invalid or missing bridge pairing token
