@@ -418,7 +418,7 @@ async function translateDocumentWithMath(text: string, textTable: string, mathCo
     result += translateTextPreservingNewlinesAndFormFeeds(remainingText, textTable);
   }
 
-  return result;
+  return unicodeBrailleToAscii(result);
 }
 
 /**
@@ -455,7 +455,7 @@ async function convertMathOnly(text: string, mathCode: string): Promise<string> 
   // Append any remaining text after the last math block
   result += text.slice(lastIndex);
 
-  return result;
+  return unicodeBrailleToAscii(result);
 }
 
 // ─── Message handler ─────────────────────────────────────────────────────────

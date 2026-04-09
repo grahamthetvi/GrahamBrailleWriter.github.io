@@ -1,3 +1,4 @@
+import { unicodeBrailleToAscii } from '../../utils/braille';
 import type { Embosser, EmbossingAttributeSet, Rectangle } from './Embosser';
 
 export class GenericTextEmbosser implements Embosser {
@@ -25,8 +26,11 @@ export class GenericTextEmbosser implements Embosser {
      * Often, if a document "only prints one line", it's missing CR/LF line terminators.
      */
     generateBytes(brf: string, _attributes: EmbossingAttributeSet): Uint8Array {
+        // Math (SRE) and passage markers may be Unicode braille; embossers expect
+        // North American ASCII BRF (one byte per cell). UTF-8 multi-byte cells often emboss blank.
+        const asciiBrf = unicodeBrailleToAscii(brf);
         // 1. Ensure all lines end with \r\n (Carriage Return + Line Feed)
-        const lines = brf.split(/\r?\n/);
+        const lines = asciiBrf.split(/\r?\n/);
 
         // Default page settings
         const linesPerPage = 25;
