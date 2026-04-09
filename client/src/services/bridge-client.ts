@@ -15,7 +15,44 @@ const MAX_FAST_FAILURES = 3;
 // Status polling
 // ---------------------------------------------------------------------------
 
-type StatusCallback = (connected: boolean) => void;
+export interface BridgeStatus {
+  connected: boolean;
+  updateAvailable: boolean;
+}
+
+type StatusCallback = (status: BridgeStatus) => void;
+
+const GITHUB_RELEASES_API = 'https://api.github.com/repos/grahamthetvi/Graham_Braille_Editor/releases/latest';
+const GITHUB_CACHE_KEY = 'graham-bridge-latest-release';
+const GITHUB_CACHE_TIME_KEY = 'graham-bridge-latest-release-time';
+
+async function getLatestGitHubRelease(): Promise<string | null> {
+  try {
+    const cached = localStorage.getItem(GITHUB_CACHE_KEY);
+    const cachedTime = localStorage.getItem(GITHUB_CACHE_TIME_KEY);
+    const now = Date.now();
+    // Cache for 24 hours (24 * 60 * 60 * 1000 ms)
+    if (cached && cachedTime && (now - parseInt(cachedTime)) < 86400000) {
+      return cached;
+    }
+    const res = await fetch(GITHUB_RELEASES_API, {
+      signal: AbortSignal.timeout(5_000)
+    });
+    if (!res.ok) return cached;
+    const data = await res.json();
+    const tag = data.tag_name || '';
+    const version = tag.replace(/^v/, ''); // e.g. 'v3.2' -> '3.2'
+    
+    if (version) {
+      localStorage.setItem(GITHUB_CACHE_KEY, version);
+      localStorage.setItem(GITHUB_CACHE_TIME_KEY, now.toString());
+      return version;
+    }
+    return cached;
+  } catch {
+    return localStorage.getItem(GITHUB_CACHE_KEY);
+  }
+}
 
 /**
  * Start polling the bridge /status endpoint.
@@ -24,7 +61,8 @@ type StatusCallback = (connected: boolean) => void;
  * Returns a cleanup function.
  */
 export function startBridgeStatusPolling(onChange: StatusCallback): () => void {
-  let lastState: boolean | null = null;
+  let lastConnected: boolean | null = null;
+  let lastUpdateAvailable: boolean | null = null;
   let failCount = 0;
   let active = true;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -32,16 +70,26 @@ export function startBridgeStatusPolling(onChange: StatusCallback): () => void {
   async function poll() {
     if (!active) return;
     
-    const connected = await checkBridgeStatus();
-    if (connected !== lastState) {
-      lastState = connected;
-      onChange(connected);
-    }
+    const { connected, localVersion } = await checkBridgeStatus();
+    let updateAvailable = false;
 
     if (connected) {
       failCount = 0;
+      const latestVersion = await getLatestGitHubRelease();
+      if (latestVersion) {
+        // If localVersion is undefined or less than latestVersion
+        if (!localVersion || localVersion.localeCompare(latestVersion, undefined, { numeric: true, sensitivity: 'base' }) < 0) {
+          updateAvailable = true;
+        }
+      }
     } else {
       failCount++;
+    }
+
+    if (connected !== lastConnected || updateAvailable !== lastUpdateAvailable) {
+      lastConnected = connected;
+      lastUpdateAvailable = updateAvailable;
+      onChange({ connected, updateAvailable });
     }
 
     const interval = failCount >= MAX_FAST_FAILURES ? BACKOFF_POLL_INTERVAL_MS : BASE_POLL_INTERVAL_MS;
@@ -66,12 +114,12 @@ export function startBridgeStatusPolling(onChange: StatusCallback): () => void {
 /**
  * Single-shot status check.
  */
-export async function checkBridgeStatus(): Promise<boolean> {
+export async function checkBridgeStatus(): Promise<{ connected: boolean; localVersion?: string }> {
   try {
     const res = await fetch(`${BRIDGE_BASE}/status`, {
       signal: AbortSignal.timeout(2_000),
     });
-    if (!res.ok) return false;
+    if (!res.ok) return { connected: false };
 
     // Parse the response to ensure we are actually talking to the Graham Bridge
     // and not another local service (e.g. webpack dev server) running on 8080.
@@ -80,17 +128,17 @@ export async function checkBridgeStatus(): Promise<boolean> {
       const data = JSON.parse(text);
       if (data && data.status === 'ok') {
         if (data.app) {
-          return data.app === 'graham-bridge';
+          return { connected: data.app === 'graham-bridge', localVersion: data.version };
         }
         // Fallback for older bridge binaries that only returned {"status":"ok"}
-        return true;
+        return { connected: true };
       }
-      return false;
+      return { connected: false };
     } catch {
-      return false; // Not JSON or invalid format
+      return { connected: false }; // Not JSON or invalid format
     }
   } catch {
-    return false;
+    return { connected: false };
   }
 }
 

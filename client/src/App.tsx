@@ -123,6 +123,7 @@ export default function App() {
   }
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
+  const [bridgeUpdateAvailable, setBridgeUpdateAvailable] = useState(false);
   const [selectedTable, setSelectedTable] = useState(DEFAULT_TABLE);
   const [mathCode, setMathCode] = useState<MathCode>(() => readStoredMathCode());
 
@@ -197,7 +198,10 @@ export default function App() {
   const useWebUSB = canUseWebUSB();
   useEffect(() => {
     if (useWebUSB) return; // No need to poll bridge on ChromeOS
-    const stopPolling = startBridgeStatusPolling(setBridgeConnected);
+    const stopPolling = startBridgeStatusPolling((status) => {
+      setBridgeConnected(status.connected);
+      setBridgeUpdateAvailable(status.updateAvailable);
+    });
     return stopPolling;
   }, [useWebUSB]);
 
@@ -971,6 +975,7 @@ export default function App() {
       {/* ── Status bar ───────────────────────────────────────────────────── */}
       <StatusBar
         bridgeConnected={bridgeConnected}
+        bridgeUpdateAvailable={bridgeUpdateAvailable}
         useWebUSB={useWebUSB}
         brfLength={translatedText.length}
         wordCount={wordCount}
