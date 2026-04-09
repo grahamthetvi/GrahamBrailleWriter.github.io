@@ -124,9 +124,9 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                       file, launch from the app menu
                     </li>
                     <li>
-                      <strong>Fedora / RPM:</strong> download{' '}
-                      <code>graham-bridge-linux-fedora.x86_64.rpm</code> from Releases, then{' '}
-                      <code>sudo dnf install ./graham-bridge-linux-fedora.x86_64.rpm</code>
+                      <strong>Fedora / RPM:</strong> from Releases, download{' '}
+                      <code>{'graham-bridge-<version>-linux-fedora.x86_64.rpm'}</code>, then{' '}
+                      <code>sudo dnf install ./that-file.rpm</code>
                     </li>
                   </ol>
                 </div>

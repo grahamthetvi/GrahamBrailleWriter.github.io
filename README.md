@@ -18,7 +18,7 @@ Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/rel
 - `graham-bridge-windows.zip` (for Windows)
 - `graham-bridge-macos.zip` (for macOS Intel & Apple Silicon)
 - `graham-bridge-linux.zip` (generic Linux: extract and run the binary)
-- `graham-bridge-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux: install with `dnf`; see below)
+- `graham-bridge-<version>-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux: install with `dnf`; see below — e.g. `graham-bridge-3.2.2-linux-fedora.x86_64.rpm`)
 
 ---
 
@@ -63,10 +63,10 @@ Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/rel
 
 ### 🎩 Linux Setup (Fedora / RPM)
 
-1. From the same [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) page, download **`graham-bridge-linux-fedora.x86_64.rpm`** (built on Fedora in CI; suitable for Fedora and other `dnf`-based systems with compatible dependencies).
-2. Install:
+1. From the same [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) page, download **`graham-bridge-<version>-linux-fedora.x86_64.rpm`** for the tag you want (built in CI on Ubuntu with `rpmbuild`; suitable for Fedora and other `dnf`-based systems with compatible dependencies).
+2. Install (replace the filename with the one you downloaded):
    ```bash
-   sudo dnf install ./graham-bridge-linux-fedora.x86_64.rpm
+   sudo dnf install ./graham-bridge-3.2.2-linux-fedora.x86_64.rpm
    ```
 3. Launch **Graham Braille Editor Bridge** from the application menu, or run `graham-bridge` from a terminal.
 

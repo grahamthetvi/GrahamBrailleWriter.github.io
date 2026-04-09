@@ -10,9 +10,10 @@ RPM_ROOT="$DIR/rpmbuild"
 rm -rf "$RPM_ROOT"  # Clean up old build environment and stale RPMs
 mkdir -p "$RPM_ROOT"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-VERSION="3.2.1"
+VERSION="3.2.2"
 SOURCE_DIR="graham-bridge-$VERSION"
-RPM_FINAL_NAME="graham-bridge-linux-fedora.x86_64.rpm"
+# Distinct asset name per release (GitHub + dnf); NVR inside the RPM stays graham-bridge-<version>.
+RPM_FINAL_NAME="graham-bridge-${VERSION}-linux-fedora.x86_64.rpm"
 
 # Create source tarball containing the pre-compiled binary
 echo "Creating source tarball..."
