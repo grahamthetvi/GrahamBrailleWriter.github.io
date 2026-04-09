@@ -131,6 +131,7 @@ jobs:
             | 🍎 macOS | `graham-bridge-macos.zip` → open `Graham Bridge.app` |
 
             ### What's New
+            - **v3.2.1:** Debug dashboard shows Live immediately (SSE stream opens even before the first print job)
             - Debug dashboard at `http://localhost:8080/debug` — live print job log, BRF text preview, hex dump, printer list, and test print button
             - Renamed from "Braille Vibe Bridge" to "Graham Bridge"
           files: out/*

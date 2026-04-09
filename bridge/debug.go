@@ -137,6 +137,12 @@ func handleLogStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	// Open the stream immediately so clients receive headers and EventSource
+	// fires onopen even when there are no jobs yet (net/http delays headers
+	// until the first Write).
+	fmt.Fprintf(w, ": stream open\n\n")
+	flusher.Flush()
+
 	// Replay existing jobs first.
 	jobMu.RLock()
 	existing := make([]JobEvent, len(jobs))
