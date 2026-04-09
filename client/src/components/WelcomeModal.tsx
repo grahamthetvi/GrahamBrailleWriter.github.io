@@ -95,6 +95,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                 The app includes <strong>embosser drivers</strong> for Enabling Technologies, Index, ViewPlus, Braillo, and others—pick the model that matches your device when you print.
                 <strong> ChromeOS</strong> users can use WebUSB to send braille directly from the browser.
                 <strong> Windows/macOS/Linux</strong> users run the small <strong>Graham Bridge</strong> app so print jobs reach the embosser reliably. ViewPlus left-margin tuning stays under <strong>⚙ Layout</strong> (see above).
+                The bridge listens only on <strong>127.0.0.1:8080</strong> and accepts browser traffic from official Graham Braille Editor sites (and local dev), so random websites cannot send print jobs to it.
               </p>
 
               <div className="install-grid">
@@ -117,9 +118,16 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                 <div className="install-card">
                   <h4>🐧 Linux Bridge</h4>
                   <ol>
-                    <li>Move binary to <code>/usr/local/bin</code></li>
-                    <li>Install <code>.desktop</code> shortcut</li>
-                    <li>Launch from app menu</li>
+                    <li>
+                      <strong>ZIP:</strong> move <code>graham-bridge-linux-amd64</code> to{' '}
+                      <code>/usr/local/bin/graham-bridge</code>, install the <code>.desktop</code>{' '}
+                      file, launch from the app menu
+                    </li>
+                    <li>
+                      <strong>Fedora / RPM:</strong> download{' '}
+                      <code>graham-bridge-linux-fedora.x86_64.rpm</code> from Releases, then{' '}
+                      <code>sudo dnf install ./graham-bridge-linux-fedora.x86_64.rpm</code>
+                    </li>
                   </ol>
                 </div>
               </div>

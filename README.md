@@ -14,10 +14,11 @@ This guide is primarily for **School IT Administrators** who are setting up the 
 The Bridge app is pre-compiled for Windows, macOS, and Linux. You do **not** need to install Go, Node.js, or any developer tools to run it.
 
 ### 📥 1. Download the Bridge
-Go to the **[Releases](https://github.com/grahamthetvi/GrahamBrailleWriter/releases)** tab on GitHub and download the appropriate `.zip` file for your operating system:
+Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases)** tab on GitHub and download the build for your operating system:
 - `graham-bridge-windows.zip` (for Windows)
 - `graham-bridge-macos.zip` (for macOS Intel & Apple Silicon)
-- `graham-bridge-linux.zip` (for Linux)
+- `graham-bridge-linux.zip` (generic Linux: extract and run the binary)
+- `graham-bridge-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux: install with `dnf`; see below)
 
 ---
 
@@ -44,15 +45,15 @@ Go to the **[Releases](https://github.com/grahamthetvi/GrahamBrailleWriter/relea
 
 ---
 
-### 🐧 Linux Setup (Ubuntu/Debian/ChromeOS)
+### 🐧 Linux Setup (Ubuntu/Debian/ChromeOS — ZIP)
 
 1. Extract the downloaded `graham-bridge-linux.zip` file.
-2. The zip contains the executable binary `graham-bridge-linux` and a desktop shortcut `graham-bridge.desktop`.
+2. The zip contains the executable binary `graham-bridge-linux-amd64` and a desktop shortcut `graham-bridge.desktop`.
 3. Move the binary to a global location, for example:
    ```bash
-   sudo mv graham-bridge-linux /usr/local/bin/
+   sudo mv graham-bridge-linux-amd64 /usr/local/bin/graham-bridge
    ```
-4. Edit the `Exec=` line in the `graham-bridge.desktop` file to point to `/usr/local/bin/graham-bridge-linux`.
+4. Edit the `Exec=` line in the `graham-bridge.desktop` file to point to `/usr/local/bin/graham-bridge` (or keep `Exec=graham-bridge` if that binary is on your `PATH`).
 5. Install the desktop shortcut so it appears in the app launcher:
    ```bash
    mkdir -p ~/.local/share/applications
@@ -60,13 +61,24 @@ Go to the **[Releases](https://github.com/grahamthetvi/GrahamBrailleWriter/relea
    ```
 6. You can now launch "Graham Braille Editor Bridge" from your application menu!
 
+### 🎩 Linux Setup (Fedora / RPM)
+
+1. From the same [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) page, download **`graham-bridge-linux-fedora.x86_64.rpm`** (built on Fedora in CI; suitable for Fedora and other `dnf`-based systems with compatible dependencies).
+2. Install:
+   ```bash
+   sudo dnf install ./graham-bridge-linux-fedora.x86_64.rpm
+   ```
+3. Launch **Graham Braille Editor Bridge** from the application menu, or run `graham-bridge` from a terminal.
+
 ---
 
 ## ⚙️ How It Works
 
 Once running, the bridge operates silently in the background and places an icon in your system tray. 
-- Right-clicking the tray icon allows you to check its status, easily open the Graham Braille Editor Editor in your browser, or cleanly quit the background process.
-- The app listens on `localhost:8080`. It only accepts specific local CORS requests originating from the Graham Braille Editor web application, effectively blocking external or malicious sites from printing directly to your embosser without your permission.
+- Right-clicking the tray icon allows you to check its status, easily open the Graham Braille Editor in your browser, or cleanly quit the background process.
+- The HTTP server listens only on **`127.0.0.1:8080`** (not exposed to the LAN). Web pages in other browsers or on other machines cannot reach it directly over the network.
+- **Browser security (CORS):** Cross-origin requests must come from allowed Graham Braille Editor origins (the official GitHub Pages site, **grahambrailleeditor.com**, local dev servers such as Vite on port 5173, and the bridge’s own debug page on port 8080). Other `Origin` values receive **403 Forbidden**. Same-origin and tools without an `Origin` header (such as `curl`) are still allowed for local troubleshooting.
+- **Print payload limits:** `POST /print` accepts at most **5 MB** of JSON body to reduce abuse and accidental huge uploads.
 - Make sure your Braille embosser is physically connected (USB/Network) and recognized by your operating system's printer settings!
 
 ## 🖨️ Supported Embossers

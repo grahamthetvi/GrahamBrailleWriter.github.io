@@ -8,7 +8,7 @@
 //	GET  /status  → 200 {"status":"ok"}
 //	POST /print   → {"printer":"Name","data":"<base64 BRF>"}
 //
-// CORS is permissive so that the GitHub Pages client can reach localhost.
+// CORS allows only trusted Graham Braille Editor web origins (plus local dev URLs).
 // The server binds to 127.0.0.1 only (not 0.0.0.0).
 package main
 

@@ -8,6 +8,13 @@ bridge/dist/
 # Vite
 client/.vite/
 
+# Graham Bridge RPM build tree (see bridge/build-rpm.sh; keep rpmbuild/SPECS/*.spec in git)
+bridge/rpmbuild/BUILD/
+bridge/rpmbuild/BUILDROOT/
+bridge/rpmbuild/RPMS/
+bridge/rpmbuild/SOURCES/
+bridge/rpmbuild/SRPMS/
+
 # Go binaries
 bridge/bridge
 bridge/bridge-linux

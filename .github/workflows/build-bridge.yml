@@ -127,10 +127,11 @@ jobs:
             |---|---|
             | 🪟 Windows | `graham-bridge-windows.zip` → run `graham-bridge-windows.exe` |
             | 🐧 Linux (ZIP) | `graham-bridge-linux.zip` → run `graham-bridge-linux-amd64` + install `.desktop` |
-            | 🐧 Linux (RPM) | `.rpm` file → `sudo dnf install ./graham-bridge-*.rpm` |
+            | 🐧 Linux (Fedora RPM) | `graham-bridge-linux-fedora.x86_64.rpm` → `sudo dnf install ./graham-bridge-linux-fedora.x86_64.rpm` |
             | 🍎 macOS | `graham-bridge-macos.zip` → open `Graham Bridge.app` |
 
             ### What's New
+            - **RPM:** Release asset `graham-bridge-linux-fedora.x86_64.rpm` (Fedora/RHEL-family `dnf` install); internal package name remains `graham-bridge`
             - **v3.2.1:** Debug dashboard shows Live immediately (SSE stream opens even before the first print job)
             - Debug dashboard at `http://localhost:8080/debug` — live print job log, BRF text preview, hex dump, printer list, and test print button
             - Renamed from "Braille Vibe Bridge" to "Graham Bridge"
