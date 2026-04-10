@@ -37,6 +37,8 @@ export interface UseBrailleReturn {
   backTranslateBrf: (brf: string, table?: string) => Promise<BackTranslateBrfResult>;
   /** The most recent translated BRF string (Braille ASCII). */
   translatedText: string;
+  /** The source string that corresponds to the most recent translatedText. */
+  translatedSourceText: string;
   /** True while the worker is initialising or a translation is in flight. */
   isLoading: boolean;
   /**
@@ -63,6 +65,7 @@ export function useBraille(): UseBrailleReturn {
   } | null>(null);
 
   const [translatedText, setTranslatedText] = useState('');
+  const [translatedSourceText, setTranslatedSourceText] = useState('');
   const [isLoading, setIsLoading] = useState(true);   // true until READY
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +89,7 @@ export function useBraille(): UseBrailleReturn {
     worker.addEventListener('message', (e: MessageEvent) => {
       const msg = e.data as
         | { type: 'READY' }
-        | { type: 'RESULT'; result: string }
+        | { type: 'RESULT'; result: string; sourceText: string }
         | { type: 'CONVERT_MATH_RESULT'; result: string }
         | { type: 'BACK_TRANSLATE_RESULT'; plainText: string; brf: string }
         | { type: 'PROGRESS'; percent: number }
@@ -104,6 +107,7 @@ export function useBraille(): UseBrailleReturn {
         setProgress(msg.percent);
       } else if (msg.type === 'RESULT') {
         setTranslatedText(msg.result);
+        setTranslatedSourceText(msg.sourceText);
         setProgress(100);
         setIsLoading(false);
         setError(null);
@@ -215,6 +219,7 @@ export function useBraille(): UseBrailleReturn {
     convertMath,
     backTranslateBrf,
     translatedText,
+    translatedSourceText,
     isLoading,
     progress,
     error,

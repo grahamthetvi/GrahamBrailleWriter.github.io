@@ -119,7 +119,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       value: initialValue,
       language: 'plaintext',
       theme: monacoTheme,
-      wordWrap: 'off',
+      wordWrap: 'wordWrapColumn',
       wordWrapColumn: cellsPerRow,
       rulers: [cellsPerRow],
       minimap: { enabled: false },
@@ -150,11 +150,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       if (isExternalUpdate.current) return;
       const text = editorRef.current?.getValue() ?? '';
 
-      // Debounce: only notify after 500ms of inactivity
+      // Debounce: only notify after 800ms of inactivity
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
         onTextChangeRef.current(text);
-      }, 500);
+      }, 800);
     });
 
     return () => {

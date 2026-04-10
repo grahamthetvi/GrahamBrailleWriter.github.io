@@ -73,6 +73,8 @@ interface PageSettings {
    */
   paragraphFirstLineStartCell: number;
   paragraphRunoverStartCell: number;
+  /** Seconds of absolute typing pause before syncing visual formatting. 0 = disabled. */
+  liveSyncDelaySeconds?: number;
 }
 
 function inferPaperFormat(cellsPerRow: number, linesPerPage: number): PaperFormat {
@@ -101,6 +103,7 @@ const DEFAULT_PAGE_SETTINGS: PageSettings = {
   viewPlusLeftPadCells: VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS,
   paragraphFirstLineStartCell: 1,
   paragraphRunoverStartCell: 1,
+  liveSyncDelaySeconds: 4.5,
 };
 
 export default function App() {
@@ -124,7 +127,23 @@ export default function App() {
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [bridgeUpdateAvailable, setBridgeUpdateAvailable] = useState(false);
-  const [selectedTable, setSelectedTable] = useState(DEFAULT_TABLE);
+  const [selectedTable, setSelectedTable] = useState(() => {
+    try {
+      const v = localStorage.getItem('graham-braille-selected-table');
+      return v || DEFAULT_TABLE;
+    } catch {
+      return DEFAULT_TABLE;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('graham-braille-selected-table', selectedTable);
+    } catch {
+      /* ignore */
+    }
+  }, [selectedTable]);
+
   const [mathCode, setMathCode] = useState<MathCode>(() => readStoredMathCode());
 
   // ── Perkins Viewer ───────────────────────────────────────────────────────
@@ -170,6 +189,9 @@ export default function App() {
       if (typeof merged.paragraphRunoverStartCell !== 'number' || Number.isNaN(merged.paragraphRunoverStartCell)) {
         merged.paragraphRunoverStartCell = DEFAULT_PAGE_SETTINGS.paragraphRunoverStartCell;
       }
+      if (typeof merged.liveSyncDelaySeconds !== 'number' || Number.isNaN(merged.liveSyncDelaySeconds)) {
+        merged.liveSyncDelaySeconds = DEFAULT_PAGE_SETTINGS.liveSyncDelaySeconds;
+      }
       return merged;
     } catch {
       return DEFAULT_PAGE_SETTINGS;
@@ -184,7 +206,7 @@ export default function App() {
   const [showPrint, setShowPrint] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
-  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady } =
+  const { translate, backTranslateBrf, translatedText, translatedSourceText, isLoading, progress, error, workerReady } =
     useBraille();
 
   // ── Track input stats for the status bar ────────────────────────────────
@@ -328,7 +350,19 @@ export default function App() {
 
   function handleDownloadPrintLayoutText() {
     if (!inputText.trim()) return;
-    const body = formatPlainTextForPrintDownload(inputText);
+    
+    let alignedText = inputText;
+    // Align with Braille wrapping formatting if translation is available
+    if (workerReady && translatedText) {
+      alignedText = buildPlainTextToMatchBrailleWrap(
+        inputText,
+        translatedText,
+        pageSettings.cellsPerRow,
+        paragraphStarts,
+      );
+    }
+    
+    const body = formatPlainTextForPrintDownload(alignedText);
     const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -349,25 +383,43 @@ export default function App() {
     [pageSettings.paragraphFirstLineStartCell, pageSettings.paragraphRunoverStartCell],
   );
 
-  // Match plain-text visual rows to BRF word-wrap (cells per row + paragraph margins).
+  // The editor normally wraps purely visually (using Monaco's native wordWrapColumn).
+  // The destructive 'buildPlainTextToMatchBrailleWrap' algorithm is reserved 
+  // exclusively for 'Download print layout' above, UNLESS the user sets a liveSyncDelaySeconds.
+
+  // Match plain-text visual rows to BRF word-wrap if user enabled live sync.
   useEffect(() => {
+    const delaySec = pageSettings.liveSyncDelaySeconds || 0;
+    if (delaySec <= 0) return;
     if (!workerReady || !translatedText || isPerkinsMode) return;
-    const current = inputTextRef.current;
-    const synced = buildPlainTextToMatchBrailleWrap(
-      current,
-      translatedText,
-      pageSettings.cellsPerRow,
-      paragraphStarts,
-    );
-    if (synced === current) return;
-    editorRef.current?.setValueFromBrailleSync(synced);
-    setInputText(synced);
+    
+    const timeoutId = setTimeout(() => {
+      const current = inputTextRef.current;
+      // We only want to sync if the current text EXACTLY matches what was translated.
+      // If the user has typed recently, they won't match (or the timer resets).
+      if (current !== translatedSourceText) return;
+
+      const synced = buildPlainTextToMatchBrailleWrap(
+        current,
+        translatedText,
+        pageSettings.cellsPerRow,
+        paragraphStarts,
+      );
+      if (synced === current) return;
+      editorRef.current?.setValueFromBrailleSync(synced);
+      setInputText(synced);
+    }, delaySec * 1000);
+
+    return () => clearTimeout(timeoutId);
   }, [
+    inputText, // Reset timer whenever the user types
     translatedText,
+    translatedSourceText,
     workerReady,
     isPerkinsMode,
     pageSettings.cellsPerRow,
     paragraphStarts,
+    pageSettings.liveSyncDelaySeconds
   ]);
 
   const brfPages = unicodeBraille
@@ -779,6 +831,24 @@ export default function App() {
                       aria-label="Show Page Numbers"
                     />
                     <span>Show Page Nums</span>
+                  </label>
+                  <label className="settings-field">
+                    <span>Live Format Sync (sec)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={60}
+                      step={0.5}
+                      value={pageSettings.liveSyncDelaySeconds ?? 4.5}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v) && v >= 0 && v <= 60) {
+                          setPageSettings(s => ({ ...s, liveSyncDelaySeconds: v }));
+                        }
+                      }}
+                      title="Set to 0 to disable, or the seconds of absolute typing pause required before forcing alignment."
+                      aria-label="Live Format Sync delay in seconds"
+                    />
                   </label>
 
                   <div

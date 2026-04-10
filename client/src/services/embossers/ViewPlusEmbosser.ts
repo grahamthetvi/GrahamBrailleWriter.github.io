@@ -10,7 +10,7 @@ export const VIEW_PLUS_LEFT_PAD_PRESETS = {
 } as const;
 
 /** Default padding cells when none is stored (US Letter ViewPlus tuning). */
-export const VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS = 15;
+export const VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS = 16;
 
 export type ViewPlusModelPreset = keyof typeof VIEW_PLUS_LEFT_PAD_PRESETS;
 

@@ -29,7 +29,7 @@
  *
  * Message protocol  (worker → main):
  *   { type: 'READY' }
- *   { type: 'RESULT',   result: string }
+ *   { type: 'RESULT',   result: string, sourceText: string }
  *   { type: 'CONVERT_MATH_RESULT', result: string }
  *   { type: 'BACK_TRANSLATE_RESULT', plainText: string, brf: string }
  *   { type: 'PROGRESS', percent: number }   // 0–100, during chunked jobs
@@ -495,7 +495,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
   }
 
   if (!text || !text.trim()) {
-    self.postMessage({ type: 'RESULT', result: '' });
+    self.postMessage({ type: 'RESULT', result: '', sourceText: text });
     return;
   }
 
@@ -506,7 +506,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
     } else if (text.length <= CHUNK_THRESHOLD) {
       // ── Direct translation (small text) ─────────────────────────────────
       const result = await translateDocumentWithMath(text, table, mathCode);
-      self.postMessage({ type: 'RESULT', result });
+      self.postMessage({ type: 'RESULT', result, sourceText: text });
     } else {
       // ── Chunked translation (large text) ─────────────────────────────────
       const chunks = splitIntoChunks(text);
@@ -522,7 +522,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
         self.postMessage({ type: 'PROGRESS', percent });
       }
 
-      self.postMessage({ type: 'RESULT', result: results.join('') });
+      self.postMessage({ type: 'RESULT', result: results.join(''), sourceText: text });
     }
   } catch (err) {
     self.postMessage({

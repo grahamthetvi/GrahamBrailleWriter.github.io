@@ -2,7 +2,7 @@ import { useState, useEffect, type ChangeEvent } from 'react';
 import { printBrf, getPrinters } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
-import { isMac, isWindows, isLinux } from '../utils/os';
+import { isMac, isWindows } from '../utils/os';
 
 const VIEWPLUS_SUPPORT_EMAIL = 'grahamthetvi@icloud.com';
 
@@ -40,6 +40,33 @@ export function PrintPanel({
   const [errorMsg, setErrorMsg] = useState('');
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
   const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
+  const [printRange, setPrintRange] = useState<'all' | 'custom'>('all');
+  const [customRange, setCustomRange] = useState('');
+
+  function parseCustomRange(rangeStr: string, maxPages: number): number[] {
+    const pages = new Set<number>();
+    const parts = rangeStr.split(',');
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      if (trimmed.includes('-')) {
+        const [start, end] = trimmed.split('-');
+        const s = parseInt(start.trim(), 10);
+        const e = parseInt(end.trim(), 10);
+        if (!isNaN(s) && !isNaN(e)) {
+          for (let i = Math.max(1, s); i <= Math.min(maxPages, e); i++) {
+            pages.add(i);
+          }
+        }
+      } else {
+        const p = parseInt(trimmed, 10);
+        if (!isNaN(p) && p >= 1 && p <= maxPages) {
+          pages.add(p);
+        }
+      }
+    }
+    return Array.from(pages).sort((a, b) => a - b);
+  }
 
   useEffect(() => {
     if (bridgeConnected && !useWebUSB) {
@@ -86,6 +113,18 @@ export function PrintPanel({
     setErrorMsg('');
     try {
       let activeBrf = brf;
+
+      const allPages = activeBrf.split('\f');
+      if (printRange === 'custom') {
+        const selectedPageNums = parseCustomRange(customRange, allPages.length);
+        if (selectedPageNums.length === 0) {
+          setErrorMsg('Invalid custom page range or no pages match.');
+          setStatus('error');
+          return;
+        }
+        activeBrf = selectedPageNums.map(n => allPages[n - 1]).join('\f');
+      }
+
       if (viewPlusPaddingApplies && viewPlusLeftPadCells > 0) {
         const pad = ' '.repeat(viewPlusLeftPadCells);
         activeBrf = activeBrf.split(/\r?\n/).map(line => pad + line).join('\n');
@@ -127,11 +166,7 @@ export function PrintPanel({
             ℹ️ <strong>Driver:</strong> Use the official ViewPlus printer driver for your embosser.
           </div>
         ) : null}
-        {isLinux() ? (
-          <div style={{ ...style, color: '#d97706' }}>
-            ⚠️ <strong>Linux:</strong> ViewPlus bridging is experimental and might not work.
-          </div>
-        ) : null}
+
       </div>
     );
   };
@@ -171,6 +206,27 @@ export function PrintPanel({
         >
           {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
+        <select
+          className="printer-input"
+          aria-label="Print range"
+          value={printRange}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => setPrintRange(e.target.value as 'all' | 'custom')}
+          style={{ width: '80px', marginLeft: '0.4rem' }}
+        >
+          <option value="all">All Pages</option>
+          <option value="custom">Custom</option>
+        </select>
+        {printRange === 'custom' && (
+          <input
+            type="text"
+            className="printer-input"
+            placeholder="e.g. 1-3, 5"
+            value={customRange}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomRange(e.target.value)}
+            style={{ width: '80px', marginLeft: '0.4rem' }}
+            aria-label="Custom page range"
+          />
+        )}
         <button
           className="toolbar-btn toolbar-btn--primary"
           onClick={handlePrint}
@@ -245,6 +301,42 @@ export function PrintPanel({
           {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
         {renderViewPlusNotice()}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem' }}>
+        <label>Pages to Print</label>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.2rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', fontSize: '0.9rem' }}>
+            <input
+              type="radio"
+              value="all"
+              checked={printRange === 'all'}
+              onChange={() => setPrintRange('all')}
+              style={{ marginRight: '0.3rem' }}
+            />
+            All Pages
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', fontSize: '0.9rem', marginLeft: '1rem' }}>
+            <input
+              type="radio"
+              value="custom"
+              checked={printRange === 'custom'}
+              onChange={() => setPrintRange('custom')}
+              style={{ marginRight: '0.3rem' }}
+            />
+            Custom
+          </label>
+          {printRange === 'custom' && (
+            <input
+              type="text"
+              placeholder="e.g. 1-5, 8, 11-13"
+              value={customRange}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomRange(e.target.value)}
+              style={{ padding: '0.3rem', width: '150px' }}
+              aria-label="Custom page range"
+            />
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
