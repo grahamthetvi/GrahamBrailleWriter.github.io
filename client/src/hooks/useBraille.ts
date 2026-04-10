@@ -18,6 +18,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
+import type { WordMapData } from '../workers/braille.worker';
 
 export type BrailleTable = 'en-ueb-g2.ctb' | 'en-ueb-g1.ctb' | 'en-us-g1.ctb' | 'en-us-g2.ctb';
 export type MathCode = 'nemeth' | 'ueb';
@@ -50,6 +51,8 @@ export interface UseBrailleReturn {
   error: string | null;
   /** True once the worker has signalled it is ready. */
   workerReady: boolean;
+  /** Source-word-to-BRF-word mapping derived from liblouis outputPos. */
+  wordMap: WordMapData | null;
 }
 
 const WORKER_TIMEOUT_MS = 30000;
@@ -70,6 +73,7 @@ export function useBraille(): UseBrailleReturn {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [workerReady, setWorkerReady] = useState(false);
+  const [wordMap, setWordMap] = useState<WordMapData | null>(null);
   const isWorkerReadyRef = useRef(false);
   const pendingTranslateRef = useRef<{ text: string; table: string; mathCode: MathCode } | null>(null);
 
@@ -89,7 +93,7 @@ export function useBraille(): UseBrailleReturn {
     worker.addEventListener('message', (e: MessageEvent) => {
       const msg = e.data as
         | { type: 'READY' }
-        | { type: 'RESULT'; result: string; sourceText: string }
+        | { type: 'RESULT'; result: string; sourceText: string; wordMap?: WordMapData }
         | { type: 'CONVERT_MATH_RESULT'; result: string }
         | { type: 'BACK_TRANSLATE_RESULT'; plainText: string; brf: string }
         | { type: 'PROGRESS'; percent: number }
@@ -108,6 +112,7 @@ export function useBraille(): UseBrailleReturn {
       } else if (msg.type === 'RESULT') {
         setTranslatedText(msg.result);
         setTranslatedSourceText(msg.sourceText);
+        setWordMap(msg.wordMap ?? null);
         setProgress(100);
         setIsLoading(false);
         setError(null);
@@ -224,6 +229,7 @@ export function useBraille(): UseBrailleReturn {
     progress,
     error,
     workerReady,
+    wordMap,
   };
 }
 

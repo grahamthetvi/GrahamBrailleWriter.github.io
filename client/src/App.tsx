@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { WordMapData } from './workers/braille.worker';
 import { Editor, type EditorHandle } from './components/Editor';
 import { ChartGenerator } from './components/ChartGenerator';
 import { PrintPanel } from './components/PrintPanel';
@@ -200,7 +201,7 @@ export default function App() {
   const [showPrint, setShowPrint] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
-  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady } =
+  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
     useBraille();
 
   // ── Track input stats for the status bar ────────────────────────────────
@@ -413,6 +414,15 @@ export default function App() {
   const [editorScrollPercentage, setEditorScrollPercentage] = useState<number | undefined>(undefined);
   const [activeWordRange, setActiveWordRange] = useState<[number, number] | null>(null);
   const [syncHighlight, setSyncHighlight] = useState(true);
+
+  const activeBrfWordRange = useMemo((): [number, number] | null => {
+    if (!syncHighlight || !activeWordRange) return null;
+    if (!wordMap || wordMap.srcToBrf.length === 0) return activeWordRange;
+    const [srcStart, srcEnd] = activeWordRange;
+    const { srcToBrf, srcToBrfEnd } = wordMap as WordMapData;
+    if (srcStart >= srcToBrf.length || srcEnd >= srcToBrfEnd.length) return null;
+    return [srcToBrf[srcStart], srcToBrfEnd[srcEnd]];
+  }, [syncHighlight, activeWordRange, wordMap]);
 
   const handleEditorScroll = useCallback((percentage: number) => {
     const container = brfContainerRef.current;
@@ -982,13 +992,13 @@ export default function App() {
                         p. {i + 1}
                       </div>
                       <pre className="brf-page-content">
-                        {pageContent.split(/(\s+)/).map((token, idx) => {
+                        {pageContent.split(/([\s\u2800]+)/).map((token, idx) => {
                           if (!token) return null;
-                          if (/^\s+$/.test(token)) {
+                          if (/^[\s\u2800]+$/.test(token)) {
                             return <Fragment key={idx}>{token}</Fragment>;
                           }
                           const currentWordIndex = globalWordIndex++;
-                          const isActive = syncHighlight && activeWordRange && currentWordIndex >= activeWordRange[0] && currentWordIndex <= activeWordRange[1];
+                          const isActive = activeBrfWordRange != null && currentWordIndex >= activeBrfWordRange[0] && currentWordIndex <= activeBrfWordRange[1];
                           return isActive ? (
                             <span key={`w${idx}`} className="braille-highlight">{token}</span>
                           ) : (

@@ -38,12 +38,23 @@
 
 // ─── Type shims for globals set by the loaded scripts ───────────────────────
 
+interface TranslateResult {
+  output: string;
+  outputPos: number[];
+}
+
 interface LiblouisEasyApi {
   setLiblouisBuild(capi: object): void;
   translateString(table: string, text: string): string | null;
+  translate(table: string, text: string): TranslateResult | null;
   backTranslateString(table: string, brf: string): string | null;
   enableOnDemandTableLoading(url: string): void;
   setLogLevel(level: number): void;
+}
+
+export interface WordMapData {
+  srcToBrf: number[];
+  srcToBrfEnd: number[];
 }
 
 interface LiblouisModule {
@@ -275,14 +286,6 @@ function wrapMathBrailleForLiteraryContext(braille: string, mathCode: string): s
   );
 }
 
-/**
- * Translates a block of text while preserving exact newline boundaries.
- * Liblouis tables often digest or alter newlines; manually splitting guarantees layout.
- */
-/**
- * Soft line breaks (\\r) inserted for braille-aligned wrapping are spaces for liblouis.
- * Legacy U+2028 from older app versions is also collapsed to space.
- */
 const SOFT_LINE_BREAK_CR = '\r';
 const LEGACY_SOFT_LINE_LS = '\u2028';
 
@@ -291,7 +294,6 @@ function translateTextPreservingNewlines(text: string, table: string): string {
   const lines = text.split('\n');
   return lines.map(line => {
     if (!line) return '';
-    // All \r are soft-wrap (or legacy CRLF junk); liblouis sees a single logical line per row.
     const forTranslate = line
       .replaceAll(SOFT_LINE_BREAK_CR, ' ')
       .replaceAll(LEGACY_SOFT_LINE_LS, ' ');
@@ -300,11 +302,227 @@ function translateTextPreservingNewlines(text: string, table: string): string {
   }).join('\n');
 }
 
-/** Form feeds separate logical blocks; translate each slice and rejoin (see chart insert). */
 function translateTextPreservingNewlinesAndFormFeeds(text: string, table: string): string {
   if (!text) return '';
   if (!text.includes('\f')) return translateTextPreservingNewlines(text, table);
   return text.split('\f').map((part) => translateTextPreservingNewlines(part, table)).join('\f');
+}
+
+// ─── Position-aware translation (for highlight mapping) ──────────────────────
+
+interface TextWithPositions {
+  output: string;
+  outputPos: number[];
+}
+
+function translateTextWithPositions(text: string, table: string): TextWithPositions {
+  if (!text) return { output: '', outputPos: [] };
+
+  const outputPos = new Array<number>(text.length).fill(-1);
+  const lines = text.split('\n');
+  const resultLines: string[] = [];
+  let srcOffset = 0;
+  let outOffset = 0;
+
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+
+    if (!line) {
+      resultLines.push('');
+    } else {
+      const forTranslate = line
+        .replaceAll(SOFT_LINE_BREAK_CR, ' ')
+        .replaceAll(LEGACY_SOFT_LINE_LS, ' ');
+
+      if (!forTranslate) {
+        resultLines.push('');
+      } else {
+        const result = liblouis!.translate(table, forTranslate);
+
+        if (result && result.outputPos) {
+          resultLines.push(result.output);
+          const linePos = result.outputPos;
+          const len = Math.min(line.length, linePos.length);
+          for (let i = 0; i < len; i++) {
+            outputPos[srcOffset + i] = linePos[i] + outOffset;
+          }
+          outOffset += result.output.length;
+        } else {
+          const translated = liblouis!.translateString(table, forTranslate) || '';
+          resultLines.push(translated);
+          outOffset += translated.length;
+        }
+      }
+    }
+
+    if (li < lines.length - 1) {
+      outputPos[srcOffset + line.length] = outOffset;
+      srcOffset += line.length + 1;
+      outOffset += 1;
+    } else {
+      srcOffset += line.length;
+    }
+  }
+
+  return { output: resultLines.join('\n'), outputPos };
+}
+
+function translateTextWithPositionsAndFormFeeds(text: string, table: string): TextWithPositions {
+  if (!text) return { output: '', outputPos: [] };
+  if (!text.includes('\f')) return translateTextWithPositions(text, table);
+
+  const outputPos = new Array<number>(text.length).fill(-1);
+  const parts = text.split('\f');
+  const resultParts: string[] = [];
+  let srcOffset = 0;
+  let outOffset = 0;
+
+  for (let pi = 0; pi < parts.length; pi++) {
+    const { output, outputPos: partPos } = translateTextWithPositions(parts[pi], table);
+    for (let i = 0; i < parts[pi].length; i++) {
+      if (partPos[i] >= 0) {
+        outputPos[srcOffset + i] = partPos[i] + outOffset;
+      }
+    }
+    resultParts.push(output);
+
+    if (pi < parts.length - 1) {
+      outputPos[srcOffset + parts[pi].length] = outOffset + output.length;
+      srcOffset += parts[pi].length + 1;
+      outOffset += output.length + 1;
+    } else {
+      srcOffset += parts[pi].length;
+      outOffset += output.length;
+    }
+  }
+
+  return { output: resultParts.join('\f'), outputPos };
+}
+
+async function translateDocumentWithMathAndPositions(
+  text: string, textTable: string, mathCode: string
+): Promise<{ result: string; outputPos: number[] }> {
+  if (!liblouis) return { result: '', outputPos: [] };
+
+  const outputPos = new Array<number>(text.length).fill(-1);
+  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)/gs;
+
+  let result = '';
+  let lastIndex = 0;
+  let match;
+
+  while ((match = chunkRegex.exec(text)) !== null) {
+    const textBefore = text.slice(lastIndex, match.index);
+    if (textBefore) {
+      const seg = translateTextWithPositionsAndFormFeeds(textBefore, textTable);
+      for (let i = 0; i < textBefore.length; i++) {
+        if (seg.outputPos[i] >= 0) {
+          outputPos[lastIndex + i] = seg.outputPos[i] + result.length;
+        }
+      }
+      result += seg.output;
+    }
+
+    const matchStart = match.index;
+    const matchLen = match[0].length;
+
+    if (match[5] !== undefined) {
+      const chartContent = '\n' + match[6] + '\n';
+      for (let i = 0; i < matchLen; i++) {
+        outputPos[matchStart + i] = result.length + Math.floor(i * chartContent.length / matchLen);
+      }
+      result += chartContent;
+    } else {
+      const latex = match[2] !== undefined ? match[2] : match[4];
+      const mathResult = await translateMath(latex, mathCode);
+      for (let i = 0; i < matchLen; i++) {
+        outputPos[matchStart + i] = result.length + Math.floor(i * mathResult.length / matchLen);
+      }
+      result += mathResult;
+    }
+
+    lastIndex = chunkRegex.lastIndex;
+  }
+
+  const remainingText = text.slice(lastIndex);
+  if (remainingText) {
+    const seg = translateTextWithPositionsAndFormFeeds(remainingText, textTable);
+    for (let i = 0; i < remainingText.length; i++) {
+      if (seg.outputPos[i] >= 0) {
+        outputPos[lastIndex + i] = seg.outputPos[i] + result.length;
+      }
+    }
+    result += seg.output;
+  }
+
+  return { result: unicodeBrailleToAscii(result), outputPos };
+}
+
+function buildWordMap(sourceText: string, brfText: string, outputPos: number[]): WordMapData {
+  const srcWords: { start: number; end: number }[] = [];
+  const brfWords: { start: number; end: number }[] = [];
+  const wordRe = /\S+/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = wordRe.exec(sourceText)) !== null) {
+    srcWords.push({ start: m.index, end: m.index + m[0].length });
+  }
+  wordRe.lastIndex = 0;
+  while ((m = wordRe.exec(brfText)) !== null) {
+    brfWords.push({ start: m.index, end: m.index + m[0].length });
+  }
+
+  const N = srcWords.length;
+  const M = brfWords.length;
+
+  if (N === 0 || M === 0) {
+    return { srcToBrf: [], srcToBrfEnd: [] };
+  }
+
+  const srcToBrf = new Array<number>(N);
+  const srcToBrfEnd = new Array<number>(N);
+
+  for (let i = 0; i < N; i++) {
+    const sw = srcWords[i];
+    let minBrfPos = Infinity;
+    let maxBrfPos = -1;
+
+    for (let c = sw.start; c < sw.end; c++) {
+      if (c < outputPos.length && outputPos[c] >= 0) {
+        if (outputPos[c] < minBrfPos) minBrfPos = outputPos[c];
+        if (outputPos[c] > maxBrfPos) maxBrfPos = outputPos[c];
+      }
+    }
+
+    if (minBrfPos === Infinity) {
+      const fallback = Math.min(M - 1, Math.floor(i * M / N));
+      srcToBrf[i] = fallback;
+      srcToBrfEnd[i] = fallback;
+      continue;
+    }
+
+    let first = -1;
+    let last = -1;
+    for (let j = 0; j < M; j++) {
+      const bw = brfWords[j];
+      if (bw.start <= maxBrfPos && bw.end > minBrfPos) {
+        if (first === -1) first = j;
+        last = j;
+      }
+      if (bw.start > maxBrfPos) break;
+    }
+
+    if (first >= 0) {
+      srcToBrf[i] = first;
+      srcToBrfEnd[i] = last;
+    } else {
+      const fallback = Math.min(M - 1, Math.floor(i * M / N));
+      srcToBrf[i] = fallback;
+      srcToBrfEnd[i] = fallback;
+    }
+  }
+
+  return { srcToBrf, srcToBrfEnd };
 }
 
 /**
@@ -504,25 +722,34 @@ self.addEventListener('message', async (event: MessageEvent) => {
       const result = await convertMathOnly(text, mathCode);
       self.postMessage({ type: 'CONVERT_MATH_RESULT', result });
     } else if (text.length <= CHUNK_THRESHOLD) {
-      // ── Direct translation (small text) ─────────────────────────────────
-      const result = await translateDocumentWithMath(text, table, mathCode);
-      self.postMessage({ type: 'RESULT', result, sourceText: text });
+      const { result, outputPos } = await translateDocumentWithMathAndPositions(text, table, mathCode);
+      const wordMap = buildWordMap(text, result, outputPos);
+      self.postMessage({ type: 'RESULT', result, sourceText: text, wordMap });
     } else {
-      // ── Chunked translation (large text) ─────────────────────────────────
       const chunks = splitIntoChunks(text);
       const results: string[] = [];
+      const globalOutputPos = new Array<number>(text.length).fill(-1);
+      let srcOffset = 0;
+      let outOffset = 0;
 
       for (let i = 0; i < chunks.length; i++) {
-        const part = await translateDocumentWithMath(chunks[i], table, mathCode);
-        results.push(part);
+        const { result, outputPos } = await translateDocumentWithMathAndPositions(chunks[i], table, mathCode);
+        for (let j = 0; j < chunks[i].length; j++) {
+          if (outputPos[j] >= 0) {
+            globalOutputPos[srcOffset + j] = outputPos[j] + outOffset;
+          }
+        }
+        srcOffset += chunks[i].length;
+        outOffset += result.length;
+        results.push(result);
 
-        // Report progress after each chunk (received by main thread in real-time
-        // because the worker runs on a separate OS thread).
         const percent = Math.round(((i + 1) / chunks.length) * 100);
         self.postMessage({ type: 'PROGRESS', percent });
       }
 
-      self.postMessage({ type: 'RESULT', result: results.join(''), sourceText: text });
+      const fullResult = results.join('');
+      const wordMap = buildWordMap(text, fullResult, globalOutputPos);
+      self.postMessage({ type: 'RESULT', result: fullResult, sourceText: text, wordMap });
     }
   } catch (err) {
     self.postMessage({

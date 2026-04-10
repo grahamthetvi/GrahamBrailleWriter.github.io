@@ -108,6 +108,83 @@ easyApiScript = easyApiScript.replace(
 	liblouis._log_callback_fn_pointer = capi.Runtime.addFunction(function(logLvl, msg) {`
 );
 
+// Inject liblouis.translate() — calls lou_translate with outputPos mapping
+// so the highlight system can map source characters to braille output characters.
+const translateMethod = `
+liblouis.translate = function(table, inbuf) {
+
+	if(typeof inbuf !== "string" || inbuf.length === 0) {
+		return { output: "", outputPos: [] };
+	}
+
+	var mode = 0;
+
+	var bufflen = inbuf.length*4+2;
+	var inbuff_ptr = capi._malloc(bufflen);
+	var outbuff_ptr = capi._malloc(bufflen);
+
+	capi.stringToUTF16(inbuf, inbuff_ptr, bufflen);
+
+	var inlen_ptr = capi._malloc(4);
+	var outlen_ptr = capi._malloc(4);
+
+	capi.setValue(inlen_ptr, bufflen, "i32");
+	capi.setValue(outlen_ptr, bufflen, "i32");
+
+	var outputPos_ptr = capi._malloc(bufflen * 4);
+
+	var success;
+	try {
+		success = capi.ccall('lou_translate', 'number',
+			['string', 'number', 'number', 'number', 'number',
+			 'number', 'number', 'number', 'number', 'number', 'number'],
+			[table, inbuff_ptr, inlen_ptr, outbuff_ptr, outlen_ptr,
+			 0, 0, outputPos_ptr, 0, 0, mode]);
+	} catch(e) {
+		capi._free(inbuff_ptr);
+		capi._free(outbuff_ptr);
+		capi._free(inlen_ptr);
+		capi._free(outlen_ptr);
+		capi._free(outputPos_ptr);
+		return null;
+	}
+
+	if(!success) {
+		capi._free(inbuff_ptr);
+		capi._free(outbuff_ptr);
+		capi._free(inlen_ptr);
+		capi._free(outlen_ptr);
+		capi._free(outputPos_ptr);
+		return null;
+	}
+
+	var actualOutLen = capi.getValue(outlen_ptr, "i32");
+
+	var start_index = outbuff_ptr >> 1;
+	var end_index = start_index + actualOutLen;
+	var outstr_buff = capi.HEAP16.slice(start_index, end_index);
+
+	var inLen = inbuf.length;
+	var outputPosArr = new Array(inLen);
+	var base = outputPos_ptr >> 2;
+	for(var i = 0; i < inLen; i++) {
+		outputPosArr[i] = capi.HEAP32[base + i];
+	}
+
+	capi._free(inbuff_ptr);
+	capi._free(outbuff_ptr);
+	capi._free(inlen_ptr);
+	capi._free(outlen_ptr);
+	capi._free(outputPos_ptr);
+
+	return { output: String.fromCharCode.apply(null, outstr_buff), outputPos: outputPosArr };
+};
+`;
+easyApiScript = easyApiScript.replace(
+  'liblouis.loadTable = function(tablename, url) {',
+  translateMethod + '\nliblouis.loadTable = function(tablename, url) {'
+);
+
 writeFileSync(easyApiDest, easyApiScript);
 console.log('✓  Copied & Patched Easy API wrapper → public/wasm/easy-api.js');
 
