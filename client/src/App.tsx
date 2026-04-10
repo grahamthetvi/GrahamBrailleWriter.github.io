@@ -73,8 +73,6 @@ interface PageSettings {
    */
   paragraphFirstLineStartCell: number;
   paragraphRunoverStartCell: number;
-  /** Seconds of absolute typing pause before syncing visual formatting. 0 = disabled. */
-  liveSyncDelaySeconds?: number;
 }
 
 function inferPaperFormat(cellsPerRow: number, linesPerPage: number): PaperFormat {
@@ -103,7 +101,6 @@ const DEFAULT_PAGE_SETTINGS: PageSettings = {
   viewPlusLeftPadCells: VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS,
   paragraphFirstLineStartCell: 1,
   paragraphRunoverStartCell: 1,
-  liveSyncDelaySeconds: 4.5,
 };
 
 export default function App() {
@@ -188,9 +185,6 @@ export default function App() {
       }
       if (typeof merged.paragraphRunoverStartCell !== 'number' || Number.isNaN(merged.paragraphRunoverStartCell)) {
         merged.paragraphRunoverStartCell = DEFAULT_PAGE_SETTINGS.paragraphRunoverStartCell;
-      }
-      if (typeof merged.liveSyncDelaySeconds !== 'number' || Number.isNaN(merged.liveSyncDelaySeconds)) {
-        merged.liveSyncDelaySeconds = DEFAULT_PAGE_SETTINGS.liveSyncDelaySeconds;
       }
       return merged;
     } catch {
@@ -385,42 +379,28 @@ export default function App() {
 
   // The editor normally wraps purely visually (using Monaco's native wordWrapColumn).
   // The destructive 'buildPlainTextToMatchBrailleWrap' algorithm is reserved 
-  // exclusively for 'Download print layout' above, UNLESS the user sets a liveSyncDelaySeconds.
+  // exclusively for 'Download print layout' above, or manual 'Sync Format' triggering.
 
-  // Match plain-text visual rows to BRF word-wrap if user enabled live sync.
-  useEffect(() => {
-    const delaySec = pageSettings.liveSyncDelaySeconds || 0;
-    if (delaySec <= 0) return;
+  function handleManualSync() {
     if (!workerReady || !translatedText || isPerkinsMode) return;
+    const current = inputTextRef.current;
     
-    const timeoutId = setTimeout(() => {
-      const current = inputTextRef.current;
-      // We only want to sync if the current text EXACTLY matches what was translated.
-      // If the user has typed recently, they won't match (or the timer resets).
-      if (current !== translatedSourceText) return;
+    // Safety check: ensure we only format against a fully up-to-date translation.
+    if (current !== translatedSourceText) {
+      alert("Please wait a moment for translation to finish before syncing formatting.");
+      return;
+    }
 
-      const synced = buildPlainTextToMatchBrailleWrap(
-        current,
-        translatedText,
-        pageSettings.cellsPerRow,
-        paragraphStarts,
-      );
-      if (synced === current) return;
-      editorRef.current?.setValueFromBrailleSync(synced);
-      setInputText(synced);
-    }, delaySec * 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [
-    inputText, // Reset timer whenever the user types
-    translatedText,
-    translatedSourceText,
-    workerReady,
-    isPerkinsMode,
-    pageSettings.cellsPerRow,
-    paragraphStarts,
-    pageSettings.liveSyncDelaySeconds
-  ]);
+    const synced = buildPlainTextToMatchBrailleWrap(
+      current,
+      translatedText,
+      pageSettings.cellsPerRow,
+      paragraphStarts,
+    );
+    if (synced === current) return;
+    editorRef.current?.setValueFromBrailleSync(synced);
+    setInputText(synced);
+  }
 
   const brfPages = unicodeBraille
     ? formatBrfPages(
@@ -621,6 +601,16 @@ export default function App() {
             aria-label="Download translated BRF file"
           >
             Download BRF
+          </button>
+
+          <button
+            className="toolbar-btn"
+            onClick={handleManualSync}
+            disabled={!translatedText || isPerkinsMode || inputText !== translatedSourceText}
+            title="Manually force the text editor's layout to soft-wrap and match the exact words on each Braille line."
+            aria-label="Sync text line wrapping to Braille"
+          >
+            Sync Format
           </button>
 
           <button
@@ -831,24 +821,6 @@ export default function App() {
                       aria-label="Show Page Numbers"
                     />
                     <span>Show Page Nums</span>
-                  </label>
-                  <label className="settings-field">
-                    <span>Live Format Sync (sec)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={60}
-                      step={0.5}
-                      value={pageSettings.liveSyncDelaySeconds ?? 4.5}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        if (!isNaN(v) && v >= 0 && v <= 60) {
-                          setPageSettings(s => ({ ...s, liveSyncDelaySeconds: v }));
-                        }
-                      }}
-                      title="Set to 0 to disable, or the seconds of absolute typing pause required before forcing alignment."
-                      aria-label="Live Format Sync delay in seconds"
-                    />
                   </label>
 
                   <div
