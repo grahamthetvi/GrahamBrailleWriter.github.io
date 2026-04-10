@@ -1070,3 +1070,9 @@ body {
   font-style: italic;
   opacity: 0.8;
 }
+
+.braille-highlight {
+  background-color: #fef08a; /* yellow-200 */
+  color: #1e293b; /* slate-800 */
+  border-radius: 2px;
+}

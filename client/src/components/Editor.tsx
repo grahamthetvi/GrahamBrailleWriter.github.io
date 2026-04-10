@@ -17,6 +17,8 @@ interface EditorProps {
   onScrollPercentageChange?: (percentage: number) => void;
   /** Externally controlled scroll percentage, [0, 1] */
   scrollPercentage?: number;
+  /** Callback fired when the cursor or selection changes, giving [startWordIndex, endWordIndex] */
+  onSelectionChange?: (range: [number, number] | null) => void;
 }
 
 export interface EditorHandle {
@@ -38,6 +40,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   cellsPerRow = 40,
   onScrollPercentageChange,
   scrollPercentage,
+  onSelectionChange,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -155,6 +158,55 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       debounceTimer.current = setTimeout(() => {
         onTextChangeRef.current(text);
       }, 800);
+    });
+
+    editorRef.current.onDidChangeCursorSelection((e) => {
+      const editor = editorRef.current;
+      if (!editor || !onSelectionChange) return;
+      const model = editor.getModel();
+      if (!model) return;
+
+      const startOffset = model.getOffsetAt(e.selection.getStartPosition());
+      const endOffset = model.getOffsetAt(e.selection.getEndPosition());
+      const text = model.getValue();
+
+      let startWord = -1;
+      let endWord = -1;
+      const isCursor = startOffset === endOffset;
+
+      const regex = /\S+/g;
+      let match;
+      let wordIndex = 0;
+
+      while ((match = regex.exec(text)) !== null) {
+        const wStart = match.index;
+        const wEnd = match.index + match[0].length;
+
+        if (isCursor) {
+          if (startOffset >= wStart && startOffset <= wEnd) {
+            startWord = wordIndex;
+            endWord = wordIndex;
+            break;
+          }
+        } else {
+          if (startWord === -1 && startOffset < wEnd) {
+            startWord = wordIndex;
+          }
+          if (startWord !== -1 && endOffset > wStart) {
+            endWord = wordIndex;
+          }
+          if (endOffset <= wStart) {
+            break;
+          }
+        }
+        wordIndex++;
+      }
+
+      if (startWord !== -1 && endWord !== -1) {
+        onSelectionChange([startWord, endWord]);
+      } else {
+        onSelectionChange(null);
+      }
     });
 
     return () => {

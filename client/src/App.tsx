@@ -429,9 +429,10 @@ export default function App() {
     paragraphStarts,
   ]);
 
-  // ── Scroll Sync ──────────────────────────────────────────────────────────
+  // ── Scroll & Highlight Sync ──────────────────────────────────────────────
   const brfContainerRef = useRef<HTMLDivElement>(null);
   const [editorScrollPercentage, setEditorScrollPercentage] = useState<number | undefined>(undefined);
+  const [activeWordRange, setActiveWordRange] = useState<[number, number] | null>(null);
 
   const handleEditorScroll = useCallback((percentage: number) => {
     const container = brfContainerRef.current;
@@ -484,6 +485,8 @@ export default function App() {
       setPageSettings(s => ({ ...s, viewPlusLeftPadCells: v }));
     }
   }
+
+  let globalWordIndex = 0;
 
   return (
     <div className="app-layout">
@@ -716,6 +719,7 @@ export default function App() {
             cellsPerRow={pageSettings.cellsPerRow}
             onScrollPercentageChange={handleEditorScroll}
             scrollPercentage={editorScrollPercentage}
+            onSelectionChange={setActiveWordRange}
           />
         </section>
 
@@ -997,7 +1001,21 @@ export default function App() {
                       <div className="brf-page-number" aria-hidden="true">
                         p. {i + 1}
                       </div>
-                      <pre className="brf-page-content">{pageContent}</pre>
+                      <pre className="brf-page-content">
+                        {pageContent.split(/(\s+)/).map((token, idx) => {
+                          if (!token) return null;
+                          if (/^\s+$/.test(token)) {
+                            return <Fragment key={idx}>{token}</Fragment>;
+                          }
+                          const currentWordIndex = globalWordIndex++;
+                          const isActive = activeWordRange && currentWordIndex >= activeWordRange[0] && currentWordIndex <= activeWordRange[1];
+                          return isActive ? (
+                            <span key={`w${idx}`} className="braille-highlight">{token}</span>
+                          ) : (
+                            <Fragment key={`w${idx}`}>{token}</Fragment>
+                          );
+                        })}
+                      </pre>
                     </div>
                   ))}
                 </div>
