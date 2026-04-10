@@ -200,7 +200,7 @@ export default function App() {
   const [showPrint, setShowPrint] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
-  const { translate, backTranslateBrf, translatedText, translatedSourceText, isLoading, progress, error, workerReady } =
+  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady } =
     useBraille();
 
   // ── Track input stats for the status bar ────────────────────────────────
@@ -379,28 +379,7 @@ export default function App() {
 
   // The editor normally wraps purely visually (using Monaco's native wordWrapColumn).
   // The destructive 'buildPlainTextToMatchBrailleWrap' algorithm is reserved 
-  // exclusively for 'Download print layout' above, or manual 'Sync Format' triggering.
-
-  function handleManualSync() {
-    if (!workerReady || !translatedText || isPerkinsMode) return;
-    const current = inputTextRef.current;
-    
-    // Safety check: ensure we only format against a fully up-to-date translation.
-    if (current !== translatedSourceText) {
-      alert("Please wait a moment for translation to finish before syncing formatting.");
-      return;
-    }
-
-    const synced = buildPlainTextToMatchBrailleWrap(
-      current,
-      translatedText,
-      pageSettings.cellsPerRow,
-      paragraphStarts,
-    );
-    if (synced === current) return;
-    editorRef.current?.setValueFromBrailleSync(synced);
-    setInputText(synced);
-  }
+  // exclusively for 'Download print layout' above.
 
   const brfPages = unicodeBraille
     ? formatBrfPages(
@@ -433,6 +412,7 @@ export default function App() {
   const brfContainerRef = useRef<HTMLDivElement>(null);
   const [editorScrollPercentage, setEditorScrollPercentage] = useState<number | undefined>(undefined);
   const [activeWordRange, setActiveWordRange] = useState<[number, number] | null>(null);
+  const [syncHighlight, setSyncHighlight] = useState(true);
 
   const handleEditorScroll = useCallback((percentage: number) => {
     const container = brfContainerRef.current;
@@ -607,13 +587,13 @@ export default function App() {
           </button>
 
           <button
-            className="toolbar-btn"
-            onClick={handleManualSync}
-            disabled={!translatedText || isPerkinsMode || inputText !== translatedSourceText}
-            title="Manually force the text editor's layout to soft-wrap and match the exact words on each Braille line."
-            aria-label="Sync text line wrapping to Braille"
+            className={`toolbar-btn${syncHighlight ? ' toolbar-btn--active' : ''}`}
+            onClick={() => setSyncHighlight(s => !s)}
+            disabled={isPerkinsMode}
+            title="Highlight corresponding braille words when selecting text in the editor."
+            aria-label="Toggle braille highlight sync"
           >
-            Sync Format
+            Sync Highlight
           </button>
 
           <button
@@ -1008,7 +988,7 @@ export default function App() {
                             return <Fragment key={idx}>{token}</Fragment>;
                           }
                           const currentWordIndex = globalWordIndex++;
-                          const isActive = activeWordRange && currentWordIndex >= activeWordRange[0] && currentWordIndex <= activeWordRange[1];
+                          const isActive = syncHighlight && activeWordRange && currentWordIndex >= activeWordRange[0] && currentWordIndex <= activeWordRange[1];
                           return isActive ? (
                             <span key={`w${idx}`} className="braille-highlight">{token}</span>
                           ) : (
