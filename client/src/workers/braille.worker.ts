@@ -289,25 +289,6 @@ function wrapMathBrailleForLiteraryContext(braille: string, mathCode: string): s
 const SOFT_LINE_BREAK_CR = '\r';
 const LEGACY_SOFT_LINE_LS = '\u2028';
 
-function translateTextPreservingNewlines(text: string, table: string): string {
-  if (!text) return '';
-  const lines = text.split('\n');
-  return lines.map(line => {
-    if (!line) return '';
-    const forTranslate = line
-      .replaceAll(SOFT_LINE_BREAK_CR, ' ')
-      .replaceAll(LEGACY_SOFT_LINE_LS, ' ');
-    if (!forTranslate) return '';
-    return liblouis!.translateString(table, forTranslate) || '';
-  }).join('\n');
-}
-
-function translateTextPreservingNewlinesAndFormFeeds(text: string, table: string): string {
-  if (!text) return '';
-  if (!text.includes('\f')) return translateTextPreservingNewlines(text, table);
-  return text.split('\f').map((part) => translateTextPreservingNewlines(part, table)).join('\f');
-}
-
 // ─── Position-aware translation (for highlight mapping) ──────────────────────
 
 interface TextWithPositions {
@@ -591,52 +572,6 @@ function backTranslateBrfRespectingNemethPassages(brf: string, textTable: string
     }
   }
   return plain;
-}
-
-/**
- * Extracts math blocks, translates them, and translates the surrounding text.
- */
-async function translateDocumentWithMath(text: string, textTable: string, mathCode: string): Promise<string> {
-  if (!liblouis) return '';
-
-  // Regex to match block math $$...$$, inline math \(...\), and chart blocks :::chart\n...\n:::
-  // chart block is group 5, chart content is group 6
-  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)/gs;
-
-  let result = '';
-  let lastIndex = 0;
-  let match;
-
-  while ((match = chunkRegex.exec(text)) !== null) {
-    // Translate the text *before* the match
-    const textBefore = text.slice(lastIndex, match.index);
-    if (textBefore) {
-      result += translateTextPreservingNewlinesAndFormFeeds(textBefore, textTable);
-    }
-
-    if (match[5] !== undefined) {
-      // It's a braille chart block. Inject the pure BRF dots untouched.
-      result += '\n' + match[6] + '\n';
-    } else {
-      // It's math
-      // Determine which capture group matched (block is match[2], inline is match[4])
-      const latex = match[2] !== undefined ? match[2] : match[4];
-
-      // Translate the math
-      const mathResult = await translateMath(latex, mathCode);
-      result += mathResult;
-    }
-
-    lastIndex = chunkRegex.lastIndex;
-  }
-
-  // Translate any remaining text after the last math block
-  const remainingText = text.slice(lastIndex);
-  if (remainingText) {
-    result += translateTextPreservingNewlinesAndFormFeeds(remainingText, textTable);
-  }
-
-  return unicodeBrailleToAscii(result);
 }
 
 /**

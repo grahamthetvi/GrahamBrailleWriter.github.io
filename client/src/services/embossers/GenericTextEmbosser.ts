@@ -29,29 +29,44 @@ export class GenericTextEmbosser implements Embosser {
         // Math (SRE) and passage markers may be Unicode braille; embossers expect
         // North American ASCII BRF (one byte per cell). UTF-8 multi-byte cells often emboss blank.
         const asciiBrf = unicodeBrailleToAscii(brf);
-        // 1. Ensure all lines end with \r\n (Carriage Return + Line Feed)
+
+        // formatBrfForOutput() already inserts \f between pages (\r\n\f\r\n). If we also inject \f
+        // every 25 lines AND treat split-only "\f" as a line of content, the embosser advances
+        // twice per page — e.g. first page OK, next page one line, following page blank.
+        if (asciiBrf.includes('\f')) {
+            const segments = asciiBrf.split('\f');
+            let formattedBrf = '';
+            for (let s = 0; s < segments.length; s++) {
+                const lines = segments[s].split(/\r?\n/);
+                for (const line of lines) {
+                    formattedBrf += line + '\r\n';
+                }
+                if (s < segments.length - 1) {
+                    formattedBrf += '\f';
+                }
+            }
+            if (!formattedBrf.endsWith('\f')) {
+                formattedBrf += '\f';
+            }
+            return new TextEncoder().encode(formattedBrf);
+        }
+
         const lines = asciiBrf.split(/\r?\n/);
-
-        // Default page settings
         const linesPerPage = 25;
-
         let formattedBrf = '';
 
         for (let i = 0; i < lines.length; i++) {
-            formattedBrf += lines[i] + '\r\n'; // CR LF is required by most basic printers
+            formattedBrf += lines[i] + '\r\n';
 
-            // Page Break Injection (Form Feed)
             if ((i + 1) % linesPerPage === 0) {
-                formattedBrf += '\f'; // \x0C Form Feed character to start a new page
+                formattedBrf += '\f';
             }
         }
 
-        // Final page break to ensure printer ejects the last page
         if (!formattedBrf.endsWith('\f')) {
             formattedBrf += '\f';
         }
 
-        const encoder = new TextEncoder();
-        return encoder.encode(formattedBrf);
+        return new TextEncoder().encode(formattedBrf);
     }
 }
