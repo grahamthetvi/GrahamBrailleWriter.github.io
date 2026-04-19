@@ -717,28 +717,61 @@ export default function App() {
             {showGraphicsEditor ? 'Tactile Graphics Editor' : 'Text Input'}
           </div>
           
-          {showGraphicsEditor ? (
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <TactileGraphicsEditor 
-                onInsert={(block) => {
-                  editorRef.current?.insertTextAtCursor(block);
-                  setShowGraphicsEditor(false);
-                }}
-                onClose={() => setShowGraphicsEditor(false)}
+          {/* Stack graphics over the text editor so Monaco stays mounted; insert uses editorRef. */}
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'grid',
+              gridTemplateRows: '1fr',
+              gridTemplateColumns: '1fr',
+            }}
+          >
+            <div
+              style={{
+                gridRow: 1,
+                gridColumn: 1,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                visibility: showGraphicsEditor ? 'hidden' : 'visible',
+                pointerEvents: showGraphicsEditor ? 'none' : 'auto',
+              }}
+              aria-hidden={showGraphicsEditor}
+            >
+              <Editor
+                ref={editorRef}
+                onTextChange={handleTextChange}
+                monacoTheme={monacoThemeMap[theme]}
+                value={fileContent}
+                cellsPerRow={pageSettings.cellsPerRow}
+                onScrollPercentageChange={handleEditorScroll}
+                scrollPercentage={editorScrollPercentage}
+                onSelectionChange={setActiveWordRange}
               />
             </div>
-          ) : (
-            <Editor
-              ref={editorRef}
-              onTextChange={handleTextChange}
-              monacoTheme={monacoThemeMap[theme]}
-              value={fileContent}
-              cellsPerRow={pageSettings.cellsPerRow}
-              onScrollPercentageChange={handleEditorScroll}
-              scrollPercentage={editorScrollPercentage}
-              onSelectionChange={setActiveWordRange}
-            />
-          )}
+            {showGraphicsEditor && (
+              <div
+                style={{
+                  gridRow: 1,
+                  gridColumn: 1,
+                  minHeight: 0,
+                  zIndex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <TactileGraphicsEditor
+                  onInsert={(block) => {
+                    editorRef.current?.insertTextAtCursor(block);
+                    setShowGraphicsEditor(false);
+                  }}
+                  onClose={() => setShowGraphicsEditor(false)}
+                />
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Right pane: braille preview + print panel */}
