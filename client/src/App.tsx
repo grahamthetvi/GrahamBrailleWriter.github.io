@@ -3,7 +3,6 @@ import type { WordMapData } from './workers/braille.worker';
 import { Editor, type EditorHandle } from './components/Editor';
 import { ChartGenerator } from './components/ChartGenerator';
 import { TactileGraphicsEditor } from './components/TactileGraphicsEditor';
-import type { GraphicSpec } from './types/graphic';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -113,8 +112,6 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
   const [showChartGenerator, setShowChartGenerator] = useState(false);
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
-  const [cursorOffset, setCursorOffset] = useState(0);
-  const [editingGraphicSpec, setEditingGraphicSpec] = useState<{ spec: GraphicSpec, start: number, end: number } | null>(null);
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -215,32 +212,6 @@ export default function App() {
   inputTextRef.current = inputText;
   const wordCount = inputText.trim() === '' ? 0 : inputText.trim().split(/\s+/).length;
   const charCount = inputText.length;
-
-  // Detect if cursor is inside a :::graphic block
-  useEffect(() => {
-    if (!inputText) {
-      setEditingGraphicSpec(null);
-      return;
-    }
-    const regex = /:::graphic\n([\s\S]*?)\n---\n([\s\S]*?)\n:::/g;
-    let match;
-    let found = false;
-    while ((match = regex.exec(inputText)) !== null) {
-      const start = match.index;
-      const end = regex.lastIndex;
-      if (cursorOffset >= start && cursorOffset <= end) {
-        try {
-          const spec = JSON.parse(match[1]) as GraphicSpec;
-          setEditingGraphicSpec({ spec, start, end });
-          found = true;
-          break;
-        } catch {
-          // invalid json, ignore
-        }
-      }
-    }
-    if (!found) setEditingGraphicSpec(null);
-  }, [cursorOffset, inputText]);
 
   // ── Bridge status polling ────────────────────────────────────────────────
   const useWebUSB = canUseWebUSB();
@@ -742,30 +713,15 @@ export default function App() {
       <main id="main-content" className="app-main">
         {/* Left pane: text editor or graphics editor */}
         <section className="editor-pane" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="pane-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="pane-title">
             {showGraphicsEditor ? 'Tactile Graphics Editor' : 'Text Input'}
-            {!showGraphicsEditor && editingGraphicSpec && (
-              <button 
-                className="toolbar-btn toolbar-btn--primary" 
-                style={{ padding: '2px 8px', fontSize: '0.8rem' }}
-                onClick={() => setShowGraphicsEditor(true)}
-              >
-                Edit Graphic Block
-              </button>
-            )}
           </div>
           
           {showGraphicsEditor ? (
             <div style={{ flex: 1, minHeight: 0 }}>
               <TactileGraphicsEditor 
-                initialSpec={editingGraphicSpec?.spec}
                 onInsert={(block) => {
-                  if (editingGraphicSpec) {
-                    editorRef.current?.replaceRange(editingGraphicSpec.start, editingGraphicSpec.end, block);
-                    setEditingGraphicSpec(null);
-                  } else {
-                    editorRef.current?.insertTextAtCursor(block);
-                  }
+                  editorRef.current?.insertTextAtCursor(block);
                   setShowGraphicsEditor(false);
                 }}
                 onClose={() => setShowGraphicsEditor(false)}
@@ -781,7 +737,6 @@ export default function App() {
               onScrollPercentageChange={handleEditorScroll}
               scrollPercentage={editorScrollPercentage}
               onSelectionChange={setActiveWordRange}
-              onCursorOffsetChange={setCursorOffset}
             />
           )}
         </section>

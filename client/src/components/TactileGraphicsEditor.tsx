@@ -3,7 +3,6 @@ import type { GraphicSpec, GraphicShape, GraphicShapeType } from '../types/graph
 import { generateGraphicBrf } from '../utils/graphicBraille';
 
 interface TactileGraphicsEditorProps {
-  initialSpec?: GraphicSpec;
   onInsert: (block: string) => void;
   onClose: () => void;
 }
@@ -15,8 +14,8 @@ const DEFAULT_SPEC: GraphicSpec = {
   shapes: [],
 };
 
-export function TactileGraphicsEditor({ initialSpec, onInsert, onClose }: TactileGraphicsEditorProps) {
-  const [spec, setSpec] = useState<GraphicSpec>(initialSpec || DEFAULT_SPEC);
+export function TactileGraphicsEditor({ onInsert, onClose }: TactileGraphicsEditorProps) {
+  const [spec, setSpec] = useState<GraphicSpec>(DEFAULT_SPEC);
   const [selectedTool, setSelectedTool] = useState<GraphicShapeType | 'select'>('select');
   const [previewBrf, setPreviewBrf] = useState('');
   
@@ -68,9 +67,8 @@ export function TactileGraphicsEditor({ initialSpec, onInsert, onClose }: Tactil
   };
 
   const handleInsert = () => {
-    const json = JSON.stringify(spec);
     const brf = generateGraphicBrf(spec);
-    const block = `:::graphic\n${json}\n---\n${brf}\n:::\n`;
+    const block = `:::graphic\n${brf}\n:::\n`;
     onInsert(block);
   };
 

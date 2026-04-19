@@ -386,7 +386,7 @@ async function translateDocumentWithMathAndPositions(
   if (!liblouis) return { result: '', outputPos: [] };
 
   const outputPos = new Array<number>(text.length).fill(-1);
-  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)|(:::graphic\n([\s\S]*?)\n---\n([\s\S]*?)\n:::)/gs;
+  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)|(:::graphic\n([\s\S]*?)\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -408,7 +408,7 @@ async function translateDocumentWithMathAndPositions(
     const matchLen = match[0].length;
 
     if (match[7] !== undefined) {
-      const graphicContent = '\n' + match[9] + '\n';
+      const graphicContent = '\n' + match[8] + '\n';
       for (let i = 0; i < matchLen; i++) {
         outputPos[matchStart + i] = result.length + Math.floor(i * graphicContent.length / matchLen);
       }
@@ -586,7 +586,7 @@ function backTranslateBrfRespectingNemethPassages(brf: string, textTable: string
  */
 async function convertMathOnly(text: string, mathCode: string): Promise<string> {
   // Regex to match block math $$...$$, inline math \(...\), and chart blocks :::chart\n...\n:::
-  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)|(:::graphic\n[\s\S]*?\n---\n[\s\S]*?\n:::)/gs;
+  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)|(:::graphic\n[\s\S]*?\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
