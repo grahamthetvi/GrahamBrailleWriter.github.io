@@ -1,5 +1,4 @@
 import { GridCanvas } from './chartBraille';
-import type { GraphicSpec } from '../types/graphic';
 
 export class GraphicCanvas extends GridCanvas {
   constructor(cellColumns: number, cellLines: number) {
@@ -138,43 +137,92 @@ export class GraphicCanvas extends GridCanvas {
       }
     }
   }
-
-  drawFreehand(points: { x: number; y: number }[]) {
-    if (points.length === 0) return;
-    for (let i = 0; i < points.length - 1; i++) {
-      this.drawLine(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
-    }
-  }
 }
 
-export function generateGraphicBrf(spec: GraphicSpec): string {
-  const canvas = new GraphicCanvas(spec.width, spec.height);
+export interface GraphicResult {
+  brf: string;
+  summary: string;
+}
 
-  for (const shape of spec.shapes) {
-    switch (shape.type) {
-      case 'polygon':
-        canvas.drawPolygon(shape.x, shape.y, shape.radius, shape.sides, shape.angle);
-        break;
-      case 'clock':
-        canvas.drawClock(shape.x, shape.y, shape.radius, shape.hours, shape.minutes);
-        break;
-      case 'fraction':
-        canvas.drawFraction(shape.x, shape.y, shape.radius, shape.numerator, shape.denominator);
-        break;
-      case 'base10':
-        canvas.drawBase10(shape.x, shape.y, shape.hundreds, shape.tens, shape.ones);
-        break;
-      case 'manipulatives':
-        canvas.drawManipulatives(shape.x, shape.y, shape.rows, shape.cols, shape.spacing);
-        break;
-      case 'numberLine':
-        canvas.drawNumberLine(shape.x, shape.y, shape.length, shape.start, shape.end, shape.step, shape.isVertical);
-        break;
-      case 'freehand':
-        canvas.drawFreehand(shape.points);
-        break;
-    }
+export function generateClock(radius: number, hours: number, minutes: number): GraphicResult {
+  const cellsW = Math.ceil((radius * 2) / 2) + 2;
+  const cellsH = Math.ceil((radius * 2) / 3) + 2;
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawClock(cellsW, cellsH * 1.5, radius, hours, minutes);
+  
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Clock showing ${hours}:${minutes.toString().padStart(2, '0')}`
+  };
+}
+
+export function generateFraction(radius: number, numerator: number, denominator: number): GraphicResult {
+  const cellsW = Math.ceil((radius * 2) / 2) + 2;
+  const cellsH = Math.ceil((radius * 2) / 3) + 2;
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawFraction(cellsW, cellsH * 1.5, radius, numerator, denominator);
+  
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Fraction circle showing ${numerator} out of ${denominator}`
+  };
+}
+
+export function generateNumberLine(length: number, start: number, end: number, step: number, isVertical: boolean): GraphicResult {
+  let cellsW = 2;
+  let cellsH = 2;
+  if (isVertical) {
+    cellsH = Math.ceil(length / 3) + 2;
+    cellsW = 4;
+  } else {
+    cellsW = Math.ceil(length / 2) + 2;
+    cellsH = 4;
   }
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawNumberLine(2, 2, length, start, end, step, isVertical);
+  
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Number line from ${start} to ${end} with steps of ${step}`
+  };
+}
 
-  return canvas.renderToBRF();
+export function generateBase10(hundreds: number, tens: number, ones: number): GraphicResult {
+  const widthDots = hundreds * 12 + tens * 3 + ones * 3 + 2;
+  const heightDots = 12;
+  const cellsW = Math.ceil(widthDots / 2) + 2;
+  const cellsH = Math.ceil(heightDots / 3) + 2;
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawBase10(2, 2, hundreds, tens, ones);
+  
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Base-10 blocks showing ${hundreds} hundreds, ${tens} tens, and ${ones} ones`
+  };
+}
+
+export function generateManipulatives(rows: number, cols: number, spacing: number): GraphicResult {
+  const widthDots = cols * spacing + 4;
+  const heightDots = rows * spacing + 4;
+  const cellsW = Math.ceil(widthDots / 2) + 2;
+  const cellsH = Math.ceil(heightDots / 3) + 2;
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawManipulatives(2, 2, rows, cols, spacing);
+  
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Array of manipulatives with ${rows} rows and ${cols} columns`
+  };
+}
+
+export function generatePolygon(radius: number, sides: number, angle: number): GraphicResult {
+  const cellsW = Math.ceil((radius * 2) / 2) + 2;
+  const cellsH = Math.ceil((radius * 2) / 3) + 2;
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawPolygon(cellsW, cellsH * 1.5, radius, sides, angle);
+  
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Polygon with ${sides} sides`
+  };
 }

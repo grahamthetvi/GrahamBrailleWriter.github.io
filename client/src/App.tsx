@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import type { WordMapData } from './workers/braille.worker';
 import { Editor, type EditorHandle } from './components/Editor';
 import { ChartGenerator } from './components/ChartGenerator';
-import { TactileGraphicsEditor } from './components/TactileGraphicsEditor';
+import { GraphicGeneratorModal } from './components/GraphicGeneratorModal';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -711,66 +711,23 @@ export default function App() {
 
       {/* ── Main two-pane layout ─────────────────────────────────────────── */}
       <main id="main-content" className="app-main">
-        {/* Left pane: text editor or graphics editor */}
+        {/* Left pane: text editor */}
         <section className="editor-pane" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="pane-title">
-            {showGraphicsEditor ? 'Tactile Graphics Editor' : 'Text Input'}
+            Text Input
           </div>
           
-          {/* Stack graphics over the text editor so Monaco stays mounted; insert uses editorRef. */}
-          <div
-            style={{
-              flex: 1,
-              minHeight: 0,
-              display: 'grid',
-              gridTemplateRows: '1fr',
-              gridTemplateColumns: '1fr',
-            }}
-          >
-            <div
-              style={{
-                gridRow: 1,
-                gridColumn: 1,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                visibility: showGraphicsEditor ? 'hidden' : 'visible',
-                pointerEvents: showGraphicsEditor ? 'none' : 'auto',
-              }}
-              aria-hidden={showGraphicsEditor}
-            >
-              <Editor
-                ref={editorRef}
-                onTextChange={handleTextChange}
-                monacoTheme={monacoThemeMap[theme]}
-                value={fileContent}
-                cellsPerRow={pageSettings.cellsPerRow}
-                onScrollPercentageChange={handleEditorScroll}
-                scrollPercentage={editorScrollPercentage}
-                onSelectionChange={setActiveWordRange}
-              />
-            </div>
-            {showGraphicsEditor && (
-              <div
-                style={{
-                  gridRow: 1,
-                  gridColumn: 1,
-                  minHeight: 0,
-                  zIndex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
-                }}
-              >
-                <TactileGraphicsEditor
-                  onInsert={(block) => {
-                    editorRef.current?.insertTextAtCursor(block);
-                    setShowGraphicsEditor(false);
-                  }}
-                  onClose={() => setShowGraphicsEditor(false)}
-                />
-              </div>
-            )}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <Editor
+              ref={editorRef}
+              onTextChange={handleTextChange}
+              monacoTheme={monacoThemeMap[theme]}
+              value={fileContent}
+              cellsPerRow={pageSettings.cellsPerRow}
+              onScrollPercentageChange={handleEditorScroll}
+              scrollPercentage={editorScrollPercentage}
+              onSelectionChange={setActiveWordRange}
+            />
           </div>
         </section>
 
@@ -1105,6 +1062,17 @@ export default function App() {
             editorRef.current?.insertTextAtCursor(brf);
             setShowChartGenerator(false);
           }}
+        />
+      )}
+
+      {/* ── Graphic Generator Modal ──────────────────────────────────────────── */}
+      {showGraphicsEditor && (
+        <GraphicGeneratorModal
+          onInsert={(brf) => {
+            editorRef.current?.insertTextAtCursor(brf);
+            setShowGraphicsEditor(false);
+          }}
+          onClose={() => setShowGraphicsEditor(false)}
         />
       )}
 
