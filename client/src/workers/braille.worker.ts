@@ -408,13 +408,15 @@ async function translateDocumentWithMathAndPositions(
     const matchLen = match[0].length;
 
     if (match[7] !== undefined) {
-      const graphicContent = '\n' + match[8] + '\n';
+      const lines = match[8].split('\n');
+      const graphicContent = '\n' + lines.map(l => '\u0001' + l).join('\n') + '\n';
       for (let i = 0; i < matchLen; i++) {
         outputPos[matchStart + i] = result.length + Math.floor(i * graphicContent.length / matchLen);
       }
       result += graphicContent;
     } else if (match[5] !== undefined) {
-      const chartContent = '\n' + match[6] + '\n';
+      const lines = match[6].split('\n');
+      const chartContent = '\n' + lines.map(l => '\u0001' + l).join('\n') + '\n';
       for (let i = 0; i < matchLen; i++) {
         outputPos[matchStart + i] = result.length + Math.floor(i * chartContent.length / matchLen);
       }

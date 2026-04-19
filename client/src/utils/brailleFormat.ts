@@ -290,6 +290,19 @@ function physicalLinesMetaForUnicodeLine(
   paragraphStarts: ParagraphLineStarts | undefined,
   brailleSpace: string,
 ): PhysicalBrailleLineMeta[] {
+  const isPreformatted = unicodeLine.startsWith('\u0001');
+  if (isPreformatted) {
+    unicodeLine = unicodeLine.slice(1);
+    const words = unicodeLine.split(brailleSpace).filter(w => w.length > 0);
+    if (words.length === 0) return [{ spans: [] }];
+    const spans: BrailleWordSpan[] = words.map((w, i) => ({
+      wordIndex: i,
+      charStart: 0,
+      charEnd: w.length,
+    }));
+    return [{ spans }];
+  }
+
   const cells = Math.max(1, cellsPerRow);
   const firstStart = paragraphStarts?.firstLineStartCell ?? 1;
   const runStart = paragraphStarts?.runoverStartCell ?? 1;
@@ -327,6 +340,11 @@ function syncPlainLineToBrailleWrap(
   cellsPerRow: number,
   paragraphStarts: ParagraphLineStarts | undefined,
 ): string {
+  const isPreformatted = unicodeBrailleLine.startsWith('\u0001');
+  if (isPreformatted) {
+    unicodeBrailleLine = unicodeBrailleLine.slice(1);
+  }
+
   const BRAILLE_SPACE = '\u2800';
   const canonicalSrc = sourceLine
     .replaceAll(SOFT_LINE_BREAK_CHAR, ' ')
@@ -556,7 +574,13 @@ function formatBrfPagesSegment(
   const rawLines = unicodeBraille.split('\n');
   const wrappedLines: string[] = [];
 
-  for (const line of rawLines) {
+  for (let line of rawLines) {
+    const isPreformatted = line.startsWith('\u0001');
+    if (isPreformatted) {
+      wrappedLines.push(line.slice(1));
+      continue;
+    }
+
     if (line.length === 0) {
       wrappedLines.push(''); // preserve blank lines (e.g. from Enter key presses)
     } else if (useParagraphStarts) {
@@ -697,7 +721,13 @@ function formatBrfForOutputSegment(
   const rawLines = rawBrf.split('\n');
   const wrapped: string[] = [];
 
-  for (const line of rawLines) {
+  for (let line of rawLines) {
+    const isPreformatted = line.startsWith('\u0001');
+    if (isPreformatted) {
+      wrapped.push(line.slice(1));
+      continue;
+    }
+
     if (!line) {
       wrapped.push('');
       continue;
