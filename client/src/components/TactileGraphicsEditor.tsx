@@ -143,7 +143,7 @@ export function TactileGraphicsEditor({ initialSpec, onInsert, onClose }: Tactil
                             const newVal = typeof value === 'boolean' ? e.target.checked : Number(e.target.value);
                             setSpec(prev => {
                               const newShapes = [...prev.shapes];
-                              (newShapes[index] as Record<string, unknown>)[key] = newVal;
+                              (newShapes[index] as unknown as Record<string, unknown>)[key] = newVal;
                               return { ...prev, shapes: newShapes };
                             });
                           }}
