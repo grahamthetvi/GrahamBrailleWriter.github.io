@@ -73,6 +73,52 @@ export class GridCanvas {
         }
     }
 
+    drawCircle(cx: number, cy: number, r: number) {
+        cx = Math.round(cx);
+        cy = Math.round(cy);
+        r = Math.round(r);
+
+        let x = r;
+        let y = 0;
+        let err = 0;
+
+        while (x >= y) {
+            this.setPoint(cx + x, cy + y);
+            this.setPoint(cx + y, cy + x);
+            this.setPoint(cx - y, cy + x);
+            this.setPoint(cx - x, cy + y);
+            this.setPoint(cx - x, cy - y);
+            this.setPoint(cx - y, cy - x);
+            this.setPoint(cx + y, cy - x);
+            this.setPoint(cx + x, cy - y);
+
+            if (err <= 0) {
+                y += 1;
+                err += 2 * y + 1;
+            }
+            if (err > 0) {
+                x -= 1;
+                err -= 2 * x + 1;
+            }
+        }
+    }
+
+    transpose() {
+        const newWidth = this.height;
+        const newHeight = this.width;
+        const newData = Array.from({ length: newHeight }, () => Array(newWidth).fill(false));
+
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                newData[x][y] = this.data[y][x];
+            }
+        }
+
+        this.width = newWidth;
+        this.height = newHeight;
+        this.data = newData;
+    }
+
     /**
      * Renders the 2D boolean grid into standard ASCII BRF text.
      */
@@ -205,10 +251,11 @@ export function generateChartBrf(spec: ChartSpec): string {
             spec.xValues,
             spec.values,
             spec.cellsWidth,
-            spec.cellsHeight
+            spec.cellsHeight,
+            spec.landscape
         );
     }
-    return generateBarChart(spec.xValues, spec.values, spec.cellsWidth, spec.cellsHeight);
+    return generateBarChart(spec.xValues, spec.values, spec.cellsWidth, spec.cellsHeight, spec.landscape);
 }
 
 /**
@@ -301,7 +348,8 @@ export function generateLineChart(
     xData: number[],
     yData: number[],
     cellsWidth: number,
-    cellsHeight: number
+    cellsHeight: number,
+    landscape = false
 ): string {
     if (yData.length === 0 || xData.length !== yData.length) return '';
     // Use a minimum of 2x2 cells
@@ -332,6 +380,7 @@ export function generateLineChart(
         canvas.drawLine(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
     }
 
+    if (landscape) canvas.transpose();
     return canvas.renderToBRF();
 }
 
@@ -339,7 +388,8 @@ export function generateBarChart(
     xData: number[],
     yData: number[],
     cellsWidth: number,
-    cellsHeight: number
+    cellsHeight: number,
+    landscape = false
 ): string {
     if (yData.length === 0 || xData.length !== yData.length) return '';
     cellsWidth = Math.max(2, cellsWidth);
@@ -386,5 +436,6 @@ export function generateBarChart(
         }
     });
 
+    if (landscape) canvas.transpose();
     return canvas.renderToBRF();
 }

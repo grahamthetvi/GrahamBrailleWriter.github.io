@@ -25,6 +25,8 @@ export interface EditorHandle {
   insertTextAtCursor: (text: string) => void;
   /** Replace editor content without firing onTextChange (debounced translate stays quiet). */
   setValueFromBrailleSync: (text: string) => void;
+  /** Finds the `:::` block under the cursor and replaces it with raw BRF text */
+  convertBlockToRawBraille: (renderFn: (type: string, params: string, content: string) => string) => void;
 }
 
 /**
@@ -112,6 +114,47 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
         editor.setValue(text);
       }
       isExternalUpdate.current = false;
+    },
+    convertBlockToRawBraille: (renderFn) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const model = editor.getModel();
+      const position = editor.getPosition();
+      if (!model || !position) return;
+
+      const text = model.getValue();
+      const offset = model.getOffsetAt(position);
+
+      const regex = /(:::(chart|landscape|shape|clock|fraction|number-line|base-ten)(?:[ \t]+(.*?))?(?:\n([\s\S]*?)\n)?:::)/gs;
+      let match;
+      let targetMatch = null;
+
+      while ((match = regex.exec(text)) !== null) {
+        if (offset >= match.index && offset <= match.index + match[0].length) {
+          targetMatch = match;
+          break;
+        }
+      }
+
+      if (targetMatch) {
+        const blockType = targetMatch[2];
+        const blockParams = targetMatch[3] || '';
+        const blockContent = targetMatch[4] || '';
+
+        const rawBrf = renderFn(blockType, blockParams, blockContent);
+        if (rawBrf) {
+          const startPos = model.getPositionAt(targetMatch.index);
+          const endPos = model.getPositionAt(targetMatch.index + targetMatch[0].length);
+          
+          editor.executeEdits('convert-block', [{
+            range: new monaco.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
+            text: rawBrf,
+            forceMoveMarkers: true
+          }]);
+          editor.pushUndoStop();
+          editor.focus();
+        }
+      }
     },
   }));
 

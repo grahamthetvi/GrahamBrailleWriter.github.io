@@ -119,3 +119,30 @@ export function extractDots(unicodeChar: string): boolean[] {
 
     return dots;
 }
+
+/**
+ * Rotates a braille ASCII BRF string 90 degrees clockwise.
+ * It maps dots 1->4, 2->1, 4->5, 5->2.
+ * Dots 3, 6, 7, 8 are dropped.
+ */
+export function rotateBrailleText(asciiBrf: string): string {
+    let out = '';
+    for (let i = 0; i < asciiBrf.length; i++) {
+        const char = asciiBrf[i];
+        if (char === '\n' || char === '\r' || char === '\f') {
+            out += char;
+            continue;
+        }
+
+        const dots = extractDots(char);
+        let offset = 0;
+        if (dots[1]) offset += 0x01; // Dot 2 -> Dot 1
+        if (dots[4]) offset += 0x02; // Dot 5 -> Dot 2
+        if (dots[0]) offset += 0x08; // Dot 1 -> Dot 4
+        if (dots[3]) offset += 0x10; // Dot 4 -> Dot 5
+
+        const mapped = UNICODE_OFFSET_TO_ASCII[offset];
+        out += mapped !== undefined ? mapped : char;
+    }
+    return out;
+}

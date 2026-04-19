@@ -2,6 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import type { WordMapData } from './workers/braille.worker';
 import { Editor, type EditorHandle } from './components/Editor';
 import { ChartGenerator } from './components/ChartGenerator';
+import { TactileGraphicGenerator } from './components/TactileGraphicGenerator';
+import { renderTactileGraphic } from './utils/tactileGraphics';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -110,6 +112,7 @@ export default function App() {
   );
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
   const [showChartGenerator, setShowChartGenerator] = useState(false);
+  const [showTactileGraphicGenerator, setShowTactileGraphicGenerator] = useState(false);
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -562,6 +565,27 @@ export default function App() {
             aria-label="Create Braille Chart"
           >
             📊 Create Chart
+          </button>
+
+          {/* Tactile Graphic Generator */}
+          <button
+            className={`toolbar-btn${showTactileGraphicGenerator ? ' toolbar-btn--active' : ''}`}
+            onClick={() => setShowTactileGraphicGenerator(true)}
+            disabled={isPerkinsMode}
+            title="Create tactile graphics like shapes, clocks, and number lines"
+            aria-label="Create Tactile Graphic"
+          >
+            📐 Tactile Graphics
+          </button>
+
+          <button
+            className="toolbar-btn"
+            onClick={() => editorRef.current?.convertBlockToRawBraille(renderTactileGraphic)}
+            disabled={isPerkinsMode}
+            title="Convert the tactile graphic block under your cursor into raw editable Braille dots"
+            aria-label="Convert to Raw Braille"
+          >
+            Convert to Raw Braille
           </button>
 
           {/* File upload — input is screen-reader-hidden; button is the control */}
@@ -1043,6 +1067,17 @@ export default function App() {
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);
             setShowChartGenerator(false);
+          }}
+        />
+      )}
+
+      {/* ── Tactile Graphic Generator Modal ────────────────────────────────── */}
+      {showTactileGraphicGenerator && (
+        <TactileGraphicGenerator
+          onClose={() => setShowTactileGraphicGenerator(false)}
+          onInsert={(brf) => {
+            editorRef.current?.insertTextAtCursor(brf);
+            setShowTactileGraphicGenerator(false);
           }}
         />
       )}

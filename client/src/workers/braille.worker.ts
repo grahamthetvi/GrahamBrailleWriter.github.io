@@ -211,8 +211,10 @@ import {
   UEB_NEMETH_OPEN,
   UEB_NEMETH_OPEN_ASCII,
   unicodeBrailleToAscii,
+  rotateBrailleText,
 } from '../utils/braille';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
+import { renderTactileGraphic } from '../utils/tactileGraphics';
 
 // Initialize SRE for Nemeth or UEB Braille output
 let currentMathCode = '';
@@ -386,7 +388,7 @@ async function translateDocumentWithMathAndPositions(
   if (!liblouis) return { result: '', outputPos: [] };
 
   const outputPos = new Array<number>(text.length).fill(-1);
-  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)/gs;
+  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::(chart|landscape|shape|clock|fraction|number-line|base-ten)(?:[ \t]+(.*?))?(?:\n([\s\S]*?)\n)?:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -408,11 +410,24 @@ async function translateDocumentWithMathAndPositions(
     const matchLen = match[0].length;
 
     if (match[5] !== undefined) {
-      const chartContent = '\n' + match[6] + '\n';
-      for (let i = 0; i < matchLen; i++) {
-        outputPos[matchStart + i] = result.length + Math.floor(i * chartContent.length / matchLen);
+      const blockType = match[6];
+      const blockParams = match[7] || '';
+      const blockContent = match[8] || '';
+
+      let blockResult = '';
+      if (blockType === 'chart') {
+        blockResult = '\n' + blockContent + '\n';
+      } else if (blockType === 'landscape') {
+        const seg = translateTextWithPositionsAndFormFeeds(blockContent, textTable);
+        blockResult = '\n' + rotateBrailleText(unicodeBrailleToAscii(seg.output)) + '\n';
+      } else {
+        blockResult = '\n' + renderTactileGraphic(blockType, blockParams) + '\n';
       }
-      result += chartContent;
+
+      for (let i = 0; i < matchLen; i++) {
+        outputPos[matchStart + i] = result.length + Math.floor(i * blockResult.length / matchLen);
+      }
+      result += blockResult;
     } else {
       const latex = match[2] !== undefined ? match[2] : match[4];
       const mathResult = await translateMath(latex, mathCode);
@@ -580,7 +595,7 @@ function backTranslateBrfRespectingNemethPassages(brf: string, textTable: string
  */
 async function convertMathOnly(text: string, mathCode: string): Promise<string> {
   // Regex to match block math $$...$$, inline math \(...\), and chart blocks :::chart\n...\n:::
-  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)/gs;
+  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::(chart|landscape|shape|clock|fraction|number-line|base-ten)(?:[ \t]+(.*?))?(?:\n([\s\S]*?)\n)?:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -591,7 +606,7 @@ async function convertMathOnly(text: string, mathCode: string): Promise<string> 
     result += text.slice(lastIndex, match.index);
 
     if (match[5] !== undefined) {
-      // Just pass the chart block through untouched
+      // Just pass the block through untouched
       result += match[5];
     } else {
       // Determine which capture group matched (block is match[2], inline is match[4])

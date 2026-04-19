@@ -18,6 +18,7 @@ export interface ChartSpec {
   title?: string;
   xAxisLabel?: string;
   yAxisLabel?: string;
+  landscape?: boolean;
 }
 
 export const CHART_LIMITS = {
