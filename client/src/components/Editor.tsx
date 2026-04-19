@@ -19,14 +19,16 @@ interface EditorProps {
   scrollPercentage?: number;
   /** Callback fired when the cursor or selection changes, giving [startWordIndex, endWordIndex] */
   onSelectionChange?: (range: [number, number] | null) => void;
+  /** Callback fired with the raw character offset of the cursor */
+  onCursorOffsetChange?: (offset: number) => void;
 }
 
 export interface EditorHandle {
   insertTextAtCursor: (text: string) => void;
   /** Replace editor content without firing onTextChange (debounced translate stays quiet). */
   setValueFromBrailleSync: (text: string) => void;
-  /** Finds the `:::` block under the cursor and replaces it with raw BRF text */
-  convertBlockToRawBraille: (renderFn: (type: string, params: string, content: string) => string) => void;
+  /** Replace a specific range of text */
+  replaceRange: (startOffset: number, endOffset: number, text: string) => void;
 }
 
 /**
@@ -43,6 +45,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   onScrollPercentageChange,
   scrollPercentage,
   onSelectionChange,
+  onCursorOffsetChange,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -115,47 +118,25 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       }
       isExternalUpdate.current = false;
     },
-    convertBlockToRawBraille: (renderFn) => {
+    replaceRange: (startOffset: number, endOffset: number, text: string) => {
       const editor = editorRef.current;
       if (!editor) return;
       const model = editor.getModel();
-      const position = editor.getPosition();
-      if (!model || !position) return;
-
-      const text = model.getValue();
-      const offset = model.getOffsetAt(position);
-
-      const regex = /(:::(chart|landscape|shape|clock|fraction|number-line|base-ten)(?:[ \t]+(.*?))?(?:\n([\s\S]*?)\n)?:::)/gs;
-      let match;
-      let targetMatch = null;
-
-      while ((match = regex.exec(text)) !== null) {
-        if (offset >= match.index && offset <= match.index + match[0].length) {
-          targetMatch = match;
-          break;
+      if (!model) return;
+      
+      const startPos = model.getPositionAt(startOffset);
+      const endPos = model.getPositionAt(endOffset);
+      
+      editor.executeEdits('replace-api', [
+        {
+          range: new monaco.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
+          text: text,
+          forceMoveMarkers: true,
         }
-      }
-
-      if (targetMatch) {
-        const blockType = targetMatch[2];
-        const blockParams = targetMatch[3] || '';
-        const blockContent = targetMatch[4] || '';
-
-        const rawBrf = renderFn(blockType, blockParams, blockContent);
-        if (rawBrf) {
-          const startPos = model.getPositionAt(targetMatch.index);
-          const endPos = model.getPositionAt(targetMatch.index + targetMatch[0].length);
-          
-          editor.executeEdits('convert-block', [{
-            range: new monaco.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
-            text: rawBrf,
-            forceMoveMarkers: true
-          }]);
-          editor.pushUndoStop();
-          editor.focus();
-        }
-      }
-    },
+      ]);
+      editor.pushUndoStop();
+      editor.focus();
+    }
   }));
 
   useEffect(() => {
@@ -205,13 +186,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
 
     editorRef.current.onDidChangeCursorSelection((e) => {
       const editor = editorRef.current;
-      if (!editor || !onSelectionChange) return;
+      if (!editor) return;
       const model = editor.getModel();
       if (!model) return;
 
       const startOffset = model.getOffsetAt(e.selection.getStartPosition());
       const endOffset = model.getOffsetAt(e.selection.getEndPosition());
       const text = model.getValue();
+
+      if (onCursorOffsetChange) {
+        onCursorOffsetChange(startOffset);
+      }
+
+      if (!onSelectionChange) return;
 
       let startWord = -1;
       let endWord = -1;

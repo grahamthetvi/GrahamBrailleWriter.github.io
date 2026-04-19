@@ -47,8 +47,7 @@ function buildSpecFromState(
     cellsHeight: number,
     title: string,
     xAxisLabel: string,
-    yAxisLabel: string,
-    landscape: boolean
+    yAxisLabel: string
 ): ChartSpec {
     const spec: ChartSpec = {
         kind,
@@ -56,7 +55,6 @@ function buildSpecFromState(
         values,
         cellsWidth,
         cellsHeight,
-        landscape,
     };
     const t = title.trim();
     const x = xAxisLabel.trim();
@@ -77,7 +75,6 @@ export function ChartGenerator({
     const [chartType, setChartType] = useState<ChartKind>('line');
     const [cellsWidth, setCellsWidth] = useState(30);
     const [cellsHeight, setCellsHeight] = useState(15);
-    const [landscape, setLandscape] = useState(false);
 
     /** Comma-separated X and Y; empty X defaults to 0, 1, 2, … in buildDataFromInputs. */
     const [dataXInput, setDataXInput] = useState('');
@@ -141,8 +138,7 @@ export function ChartGenerator({
             cellsHeight,
             title,
             xAxisLabel,
-            yAxisLabel,
-            landscape
+            yAxisLabel
         );
     }
 
@@ -251,14 +247,7 @@ export function ChartGenerator({
                 ? buildChartSummaryNemethPlainText(spec)
                 : buildChartSummaryPlainText(spec);
         const pageBreakBeforeChart = mathCode === 'nemeth' ? '\n\n\f\n\n' : '\n\n';
-        
-        let block = '';
-        if (spec.landscape) {
-            block = `${summary}${pageBreakBeforeChart}:::landscape\n${brf}\n:::\n`;
-        } else {
-            block = `${summary}${pageBreakBeforeChart}:::chart\n${brf}\n:::\n`;
-        }
-        
+        const block = `${summary}${pageBreakBeforeChart}:::chart\n${brf}\n:::\n`;
         onInsert(block);
     }
 
@@ -499,19 +488,6 @@ export function ChartGenerator({
                                         style={inputStyle}
                                     />
                                 </div>
-                            </div>
-                            <div style={{ marginTop: '16px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={landscape}
-                                        onChange={(e) => setLandscape(e.target.checked)}
-                                    />
-                                    <strong>Landscape Orientation</strong>
-                                </label>
-                                <p style={{ fontSize: '0.82rem', marginTop: '4px', opacity: 0.9 }}>
-                                    When checked, the chart is rotated 90 degrees so it can be read sideways on portrait paper.
-                                </p>
                             </div>
                             <fieldset
                                 style={{

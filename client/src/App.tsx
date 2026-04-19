@@ -2,8 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import type { WordMapData } from './workers/braille.worker';
 import { Editor, type EditorHandle } from './components/Editor';
 import { ChartGenerator } from './components/ChartGenerator';
-import { TactileGraphicGenerator } from './components/TactileGraphicGenerator';
-import { renderTactileGraphic } from './utils/tactileGraphics';
+import { TactileGraphicsEditor } from './components/TactileGraphicsEditor';
+import type { GraphicSpec } from './types/graphic';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -112,7 +112,9 @@ export default function App() {
   );
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
   const [showChartGenerator, setShowChartGenerator] = useState(false);
-  const [showTactileGraphicGenerator, setShowTactileGraphicGenerator] = useState(false);
+  const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
+  const [cursorOffset, setCursorOffset] = useState(0);
+  const [editingGraphicSpec, setEditingGraphicSpec] = useState<{ spec: GraphicSpec, start: number, end: number } | null>(null);
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -213,6 +215,32 @@ export default function App() {
   inputTextRef.current = inputText;
   const wordCount = inputText.trim() === '' ? 0 : inputText.trim().split(/\s+/).length;
   const charCount = inputText.length;
+
+  // Detect if cursor is inside a :::graphic block
+  useEffect(() => {
+    if (!inputText) {
+      setEditingGraphicSpec(null);
+      return;
+    }
+    const regex = /:::graphic\n([\s\S]*?)\n---\n([\s\S]*?)\n:::/g;
+    let match;
+    let found = false;
+    while ((match = regex.exec(inputText)) !== null) {
+      const start = match.index;
+      const end = regex.lastIndex;
+      if (cursorOffset >= start && cursorOffset <= end) {
+        try {
+          const spec = JSON.parse(match[1]) as GraphicSpec;
+          setEditingGraphicSpec({ spec, start, end });
+          found = true;
+          break;
+        } catch {
+          // invalid json, ignore
+        }
+      }
+    }
+    if (!found) setEditingGraphicSpec(null);
+  }, [cursorOffset, inputText]);
 
   // ── Bridge status polling ────────────────────────────────────────────────
   const useWebUSB = canUseWebUSB();
@@ -567,25 +595,15 @@ export default function App() {
             📊 Create Chart
           </button>
 
-          {/* Tactile Graphic Generator */}
+          {/* Graphics Editor */}
           <button
-            className={`toolbar-btn${showTactileGraphicGenerator ? ' toolbar-btn--active' : ''}`}
-            onClick={() => setShowTactileGraphicGenerator(true)}
+            className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
+            onClick={() => setShowGraphicsEditor(s => !s)}
             disabled={isPerkinsMode}
-            title="Create tactile graphics like shapes, clocks, and number lines"
-            aria-label="Create Tactile Graphic"
+            title="Open the Tactile Graphics Editor"
+            aria-label="Tactile Graphics Editor"
           >
-            📐 Tactile Graphics
-          </button>
-
-          <button
-            className="toolbar-btn"
-            onClick={() => editorRef.current?.convertBlockToRawBraille(renderTactileGraphic)}
-            disabled={isPerkinsMode}
-            title="Convert the tactile graphic block under your cursor into raw editable Braille dots"
-            aria-label="Convert to Raw Braille"
-          >
-            Convert to Raw Braille
+            🎨 Graphics
           </button>
 
           {/* File upload — input is screen-reader-hidden; button is the control */}
@@ -722,19 +740,50 @@ export default function App() {
 
       {/* ── Main two-pane layout ─────────────────────────────────────────── */}
       <main id="main-content" className="app-main">
-        {/* Left pane: text editor */}
-        <section className="editor-pane">
-          <div className="pane-title">Text Input</div>
-          <Editor
-            ref={editorRef}
-            onTextChange={handleTextChange}
-            monacoTheme={monacoThemeMap[theme]}
-            value={fileContent}
-            cellsPerRow={pageSettings.cellsPerRow}
-            onScrollPercentageChange={handleEditorScroll}
-            scrollPercentage={editorScrollPercentage}
-            onSelectionChange={setActiveWordRange}
-          />
+        {/* Left pane: text editor or graphics editor */}
+        <section className="editor-pane" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="pane-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {showGraphicsEditor ? 'Tactile Graphics Editor' : 'Text Input'}
+            {!showGraphicsEditor && editingGraphicSpec && (
+              <button 
+                className="toolbar-btn toolbar-btn--primary" 
+                style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                onClick={() => setShowGraphicsEditor(true)}
+              >
+                Edit Graphic Block
+              </button>
+            )}
+          </div>
+          
+          {showGraphicsEditor ? (
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <TactileGraphicsEditor 
+                initialSpec={editingGraphicSpec?.spec}
+                onInsert={(block) => {
+                  if (editingGraphicSpec) {
+                    editorRef.current?.replaceRange(editingGraphicSpec.start, editingGraphicSpec.end, block);
+                    setEditingGraphicSpec(null);
+                  } else {
+                    editorRef.current?.insertTextAtCursor(block);
+                  }
+                  setShowGraphicsEditor(false);
+                }}
+                onClose={() => setShowGraphicsEditor(false)}
+              />
+            </div>
+          ) : (
+            <Editor
+              ref={editorRef}
+              onTextChange={handleTextChange}
+              monacoTheme={monacoThemeMap[theme]}
+              value={fileContent}
+              cellsPerRow={pageSettings.cellsPerRow}
+              onScrollPercentageChange={handleEditorScroll}
+              scrollPercentage={editorScrollPercentage}
+              onSelectionChange={setActiveWordRange}
+              onCursorOffsetChange={setCursorOffset}
+            />
+          )}
         </section>
 
         {/* Right pane: braille preview + print panel */}
@@ -1067,17 +1116,6 @@ export default function App() {
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);
             setShowChartGenerator(false);
-          }}
-        />
-      )}
-
-      {/* ── Tactile Graphic Generator Modal ────────────────────────────────── */}
-      {showTactileGraphicGenerator && (
-        <TactileGraphicGenerator
-          onClose={() => setShowTactileGraphicGenerator(false)}
-          onInsert={(brf) => {
-            editorRef.current?.insertTextAtCursor(brf);
-            setShowTactileGraphicGenerator(false);
           }}
         />
       )}
