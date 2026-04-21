@@ -20,6 +20,7 @@ interface ChartGeneratorProps {
     onMathCodeChange: (code: MathCode) => void;
     onInsert: (text: string) => void;
     onClose: () => void;
+    inline?: boolean;
 }
 
 const STEPS = ['Data', 'Chart type and grid', 'Labels', 'Review'] as const;
@@ -70,6 +71,7 @@ export function ChartGenerator({
     onMathCodeChange,
     onInsert,
     onClose,
+    inline,
 }: ChartGeneratorProps) {
     const [step, setStep] = useState(0);
     const [chartType, setChartType] = useState<ChartKind>('line');
@@ -275,20 +277,9 @@ export function ChartGenerator({
         fontWeight: 'bold',
     };
 
-    return (
-        <div
-            className="welcome-overlay"
-            onClick={onClose}
-            aria-label="Close chart generator"
-        >
-            <div
-                className="welcome-modal"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="chart-gen-title"
-                onClick={(e) => e.stopPropagation()}
-                style={{ maxWidth: '560px' }}
-            >
+    const content = (
+        <div style={inline ? { display: 'flex', flexDirection: 'column', height: '100%', padding: '20px' } : undefined}>
+            {!inline && (
                 <header className="welcome-header">
                     <h2 id="chart-gen-title">Data-to-Braille Chart Generator</h2>
                     <button
@@ -300,12 +291,13 @@ export function ChartGenerator({
                         ✕
                     </button>
                 </header>
+            )}
 
-                <div aria-live="polite" style={{ fontSize: '0.82rem', minHeight: '1.25em', marginBottom: '8px', opacity: 0.92 }}>
-                    {liveMessage ? <span>Status: {liveMessage}</span> : <span aria-hidden> </span>}
-                </div>
+            <div aria-live="polite" style={{ fontSize: '0.82rem', minHeight: '1.25em', marginBottom: '8px', opacity: 0.92 }}>
+                {liveMessage ? <span>Status: {liveMessage}</span> : <span aria-hidden> </span>}
+            </div>
 
-                <div className="welcome-body" style={{ padding: '20px' }}>
+                <div className="welcome-body" style={{ flex: 1, padding: inline ? 0 : '20px' }}>
                     <p
                         style={{
                             marginTop: 0,
@@ -686,6 +678,28 @@ export function ChartGenerator({
                         </button>
                     )}
                 </footer>
+        </div>
+    );
+
+    if (inline) {
+        return content;
+    }
+
+    return (
+        <div
+            className="welcome-overlay"
+            onClick={onClose}
+            aria-label="Close chart generator"
+        >
+            <div
+                className="welcome-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="chart-gen-title"
+                onClick={(e) => e.stopPropagation()}
+                style={{ maxWidth: '560px' }}
+            >
+                {content}
             </div>
         </div>
     );

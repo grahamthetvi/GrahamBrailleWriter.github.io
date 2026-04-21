@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WordMapData } from './workers/braille.worker';
 import { Editor, type EditorHandle } from './components/Editor';
-import { ChartGenerator } from './components/ChartGenerator';
 import { GraphicGeneratorModal } from './components/GraphicGeneratorModal';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
@@ -110,7 +109,6 @@ export default function App() {
     () => !!localStorage.getItem('graham-braille-welcome-seen')
   );
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
-  const [showChartGenerator, setShowChartGenerator] = useState(false);
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const editorRef = useRef<EditorHandle>(null);
 
@@ -555,17 +553,6 @@ export default function App() {
             Copy AI Prompt
           </button>
 
-          {/* Chart Generator */}
-          <button
-            className={`toolbar-btn${showChartGenerator ? ' toolbar-btn--active' : ''}`}
-            onClick={() => setShowChartGenerator(true)}
-            disabled={isPerkinsMode}
-            title="Create a data-driven tactile braille chart"
-            aria-label="Create Braille Chart"
-          >
-            📊 Create Chart
-          </button>
-
           {/* Graphics Editor */}
           <button
             className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
@@ -574,7 +561,7 @@ export default function App() {
             title="Open the Tactile Graphics Editor"
             aria-label="Tactile Graphics Editor"
           >
-            🎨 Graphics
+            Graphics
           </button>
 
           {/* File upload — input is screen-reader-hidden; button is the control */}
@@ -1052,22 +1039,11 @@ export default function App() {
         progress={progress}
       />
 
-      {/* ── Chart Generator Modal ──────────────────────────────────────────── */}
-      {showChartGenerator && (
-        <ChartGenerator
-          mathCode={mathCode}
-          onMathCodeChange={setMathCode}
-          onClose={() => setShowChartGenerator(false)}
-          onInsert={(brf) => {
-            editorRef.current?.insertTextAtCursor(brf);
-            setShowChartGenerator(false);
-          }}
-        />
-      )}
-
       {/* ── Graphic Generator Modal ──────────────────────────────────────────── */}
       {showGraphicsEditor && (
         <GraphicGeneratorModal
+          mathCode={mathCode}
+          onMathCodeChange={setMathCode}
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);
             setShowGraphicsEditor(false);
