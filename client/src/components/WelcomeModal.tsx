@@ -217,6 +217,8 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
             </a>
             . Support:{' '}
             <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a>
+            <br />
+            Created by Addison Graham and built off of APH Braille Blaster.
           </p>
           <button
             ref={primaryBtnRef}

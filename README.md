@@ -93,3 +93,7 @@ The Graham Braille Editor natively supports generating hardware-specific command
 *(Note regarding ViewPlus embossers: ViewPlus relies heavily on proprietary graphical drivers.*
 *- If using ChromeOS or Linux, ViewPlus generic text support is **experimental** and may not work.*
 *- If using Windows/macOS with the Bridge, ensure you have the official ViewPlus Tiger Printer Driver installed for your specific embosser.)*
+
+## ⚖️ Legal Disclaimer
+
+Any tools, software, drivers, or brands built by APH, ViewPlus, JJB Software, and Beneficent Technology are their respective intellectual property. I do not claim ownership of any of their products, software, or technology, and they are entirely theirs and not mine.
