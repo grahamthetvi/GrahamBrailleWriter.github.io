@@ -3,6 +3,13 @@
    All colors use CSS custom properties defined in index.css.
    ============================================================ */
 
+@font-face {
+  font-family: 'Swell Braille';
+  src: url('./fonts/SwellBraille.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 *,
 *::before,
 *::after {
@@ -577,12 +584,14 @@ body {
 .brf-page-content {
   margin: 0;
   /* Monospace so braille characters line up correctly at cellsPerRow width */
-  font-family: 'Consolas', 'Courier New', 'Noto Sans Mono', monospace;
+  font-family: 'Swell Braille', 'Consolas', 'Courier New', 'Noto Sans Mono', monospace;
   font-size: 16px;
   line-height: 24px;
   white-space: pre;
   overflow-x: hidden;
   color: var(--braille-color);
+  font-weight: 600;
+  letter-spacing: 2px;
 }
 
 .brf-placeholder {
