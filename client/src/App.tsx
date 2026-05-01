@@ -168,20 +168,6 @@ export default function App() {
     );
   }
 
-  // ── Helper to map Unicode Braille to ASCII Braille for Swell Braille font ──
-  const unicodeToAsciiBraille = (str: string) => {
-    return Array.from(str)
-      .map(c => {
-        const code = c.charCodeAt(0);
-        if (code === 0x2800) return ' '; // Space
-        if (code >= 0x2801 && code <= 0x283F) {
-          return String.fromCharCode(code - 0x2800 + 0x20);
-        }
-        return c;
-      })
-      .join('');
-  };
-
   // ── Page layout settings ─────────────────────────────────────────────────
   const [pageSettings, setPageSettings] = useState<PageSettings>(() => {
     try {
@@ -1014,15 +1000,14 @@ export default function App() {
                         {pageContent.split(/([\s\u2800]+)/).map((token, idx) => {
                           if (!token) return null;
                           if (/^[\s\u2800]+$/.test(token)) {
-                            return <Fragment key={idx}>{unicodeToAsciiBraille(token)}</Fragment>;
+                            return <Fragment key={idx}>{token}</Fragment>;
                           }
                           const currentWordIndex = globalWordIndex++;
                           const isActive = activeBrfWordRange != null && currentWordIndex >= activeBrfWordRange[0] && currentWordIndex <= activeBrfWordRange[1];
-                          const asciiToken = unicodeToAsciiBraille(token);
                           return isActive ? (
-                            <span key={`w${idx}`} className="braille-highlight">{asciiToken}</span>
+                            <span key={`w${idx}`} className="braille-highlight">{token}</span>
                           ) : (
-                            <Fragment key={`w${idx}`}>{asciiToken}</Fragment>
+                            <Fragment key={`w${idx}`}>{token}</Fragment>
                           );
                         })}
                       </pre>
