@@ -1,11 +1,91 @@
 import { GridCanvas } from './chartBraille';
 
+/** Standard even-odd test: horizontal ray from (x,y) toward +∞ crosses polygon boundary. */
+function pointInPolygonEvenOdd(x: number, y: number, verts: { x: number; y: number }[]): boolean {
+  let inside = false;
+  const n = verts.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = verts[i].x;
+    const yi = verts[i].y;
+    const xj = verts[j].x;
+    const yj = verts[j].y;
+    if ((yi > y) !== (yj > y)) {
+      const xInt = ((yj - yi) * (x - xi)) / (yj - yi + 1e-12) + xi;
+      if (x < xInt) inside = !inside;
+    }
+  }
+  return inside;
+}
+
 export class GraphicCanvas extends GridCanvas {
   constructor(cellColumns: number, cellLines: number) {
     super(cellColumns, cellLines);
   }
 
-  drawCircle(cx: number, cy: number, radius: number) {
+  fillDisc(cx: number, cy: number, radius: number) {
+    const r = radius;
+    if (r <= 0) return;
+    const r2 = r * r;
+    const yMin = Math.ceil(cy - r);
+    const yMax = Math.floor(cy + r);
+    for (let y = yMin; y <= yMax; y++) {
+      const dy = y - cy;
+      const inner = r2 - dy * dy;
+      if (inner < 0) continue;
+      const w = Math.sqrt(inner);
+      const x0 = Math.ceil(cx - w);
+      const x1 = Math.floor(cx + w);
+      for (let x = x0; x <= x1; x++) {
+        this.setPoint(x, y);
+      }
+    }
+  }
+
+  /** Closed polygon (last vertex connects to first). Fills interior on the dot grid. */
+  fillPolygonInterior(vertices: { x: number; y: number }[]) {
+    if (vertices.length < 3) return;
+    const xs = vertices.map(p => p.x);
+    const ys = vertices.map(p => p.y);
+    let minX = Math.floor(Math.min(...xs));
+    let maxX = Math.ceil(Math.max(...xs));
+    let minY = Math.floor(Math.min(...ys));
+    let maxY = Math.ceil(Math.max(...ys));
+    minX = Math.max(0, minX);
+    maxX = Math.min(this.width - 1, maxX);
+    minY = Math.max(0, minY);
+    maxY = Math.min(this.height - 1, maxY);
+    for (let y = minY; y <= maxY; y++) {
+      const py = y + 0.5;
+      for (let x = minX; x <= maxX; x++) {
+        const px = x + 0.5;
+        if (pointInPolygonEvenOdd(px, py, vertices)) {
+          this.setPoint(x, y);
+        }
+      }
+    }
+  }
+
+  private heartVertices(cx: number, cy: number, radius: number): { x: number; y: number }[] {
+    if (radius <= 0) return [];
+    const scale = radius / 16;
+    const steps = Math.max(48, Math.min(200, Math.ceil(radius * 4)));
+    const out: { x: number; y: number }[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      const hx = 16 * Math.pow(Math.sin(t), 3);
+      const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      out.push({
+        x: Math.round(cx + hx * scale),
+        y: Math.round(cy - hy * scale),
+      });
+    }
+    return out;
+  }
+
+  drawCircle(cx: number, cy: number, radius: number, filled = false) {
+    if (filled) {
+      this.fillDisc(cx, cy, radius);
+    }
     let x = radius;
     let y = 0;
     let err = 0;
@@ -35,27 +115,20 @@ export class GraphicCanvas extends GridCanvas {
    * Symmetric heart outline (parametric curve), apex upward on the braille grid.
    * `radius` controls horizontal half-extent (similar spirit to drawCircle radius).
    */
-  drawHeart(cx: number, cy: number, radius: number) {
+  drawHeart(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
-    const scale = radius / 16;
-    const steps = Math.max(48, Math.min(200, Math.ceil(radius * 4)));
-    let prevX = 0;
-    let prevY = 0;
-    for (let i = 0; i <= steps; i++) {
-      const t = (i / steps) * 2 * Math.PI;
-      const hx = 16 * Math.pow(Math.sin(t), 3);
-      const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-      const x = Math.round(cx + hx * scale);
-      const y = Math.round(cy - hy * scale);
-      if (i > 0) {
-        this.drawLine(prevX, prevY, x, y);
-      }
-      prevX = x;
-      prevY = y;
+    const verts = this.heartVertices(cx, cy, radius);
+    if (filled) {
+      this.fillPolygonInterior(verts);
+    }
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % verts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
     }
   }
 
-  drawPolygon(cx: number, cy: number, radius: number, sides: number, angleDegrees: number) {
+  drawPolygon(cx: number, cy: number, radius: number, sides: number, angleDegrees: number, filled = false) {
     if (sides < 3) return;
     const points: { x: number; y: number }[] = [];
     const angleRad = (angleDegrees * Math.PI) / 180;
@@ -65,6 +138,9 @@ export class GraphicCanvas extends GridCanvas {
         x: cx + radius * Math.cos(theta),
         y: cy + radius * Math.sin(theta),
       });
+    }
+    if (filled) {
+      this.fillPolygonInterior(points);
     }
     for (let i = 0; i < sides; i++) {
       const p1 = points[i];
@@ -251,7 +327,7 @@ function clampSides(sides: number): number {
   return Number.isFinite(n) && n >= 3 ? n : 3;
 }
 
-export function generateSimpleShape(kind: SimpleShapeKind, radius: number): GraphicResult {
+export function generateSimpleShape(kind: SimpleShapeKind, radius: number, filled: boolean): GraphicResult {
   const r = clampRadius(radius);
   const span = kind === 'heart' ? r * 2.2 : r * 2;
   const cellsW = Math.ceil(span / 2) + 2;
@@ -260,27 +336,29 @@ export function generateSimpleShape(kind: SimpleShapeKind, radius: number): Grap
   const cx = cellsW;
   const cy = cellsH * 1.5;
   if (kind === 'circle') {
-    canvas.drawCircle(cx, cy, r);
+    canvas.drawCircle(cx, cy, r, filled);
   } else {
-    canvas.drawHeart(cx, cy, r);
+    canvas.drawHeart(cx, cy, r, filled);
   }
   const label = kind === 'circle' ? 'Circle' : 'Heart';
+  const fillNote = filled ? ', filled' : ', outline';
   return {
     brf: canvas.renderToBRF(),
-    summary: `${label} (size ${r})`,
+    summary: `${label} (size ${r}${fillNote})`,
   };
 }
 
-export function generatePolygon(radius: number, sides: number, angle: number): GraphicResult {
+export function generatePolygon(radius: number, sides: number, angle: number, filled: boolean): GraphicResult {
   const r = clampRadius(radius);
   const n = clampSides(sides);
   const cellsW = Math.ceil((r * 2) / 2) + 2;
   const cellsH = Math.ceil((r * 2) / 3) + 2;
   const canvas = new GraphicCanvas(cellsW, cellsH);
-  canvas.drawPolygon(cellsW, cellsH * 1.5, r, n, angle);
+  canvas.drawPolygon(cellsW, cellsH * 1.5, r, n, angle, filled);
 
+  const fillNote = filled ? ', filled' : ', outline';
   return {
     brf: canvas.renderToBRF(),
-    summary: `Polygon with ${n} sides (size ${r})`,
+    summary: `Polygon with ${n} sides (size ${r}${fillNote})`,
   };
 }
