@@ -31,6 +31,30 @@ export class GraphicCanvas extends GridCanvas {
     }
   }
 
+  /**
+   * Symmetric heart outline (parametric curve), apex upward on the braille grid.
+   * `radius` controls horizontal half-extent (similar spirit to drawCircle radius).
+   */
+  drawHeart(cx: number, cy: number, radius: number) {
+    if (radius <= 0) return;
+    const scale = radius / 16;
+    const steps = Math.max(48, Math.min(200, Math.ceil(radius * 4)));
+    let prevX = 0;
+    let prevY = 0;
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      const hx = 16 * Math.pow(Math.sin(t), 3);
+      const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      const x = Math.round(cx + hx * scale);
+      const y = Math.round(cy - hy * scale);
+      if (i > 0) {
+        this.drawLine(prevX, prevY, x, y);
+      }
+      prevX = x;
+      prevY = y;
+    }
+  }
+
   drawPolygon(cx: number, cy: number, radius: number, sides: number, angleDegrees: number) {
     if (sides < 3) return;
     const points: { x: number; y: number }[] = [];
@@ -215,14 +239,48 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export function generatePolygon(radius: number, sides: number, angle: number): GraphicResult {
-  const cellsW = Math.ceil((radius * 2) / 2) + 2;
-  const cellsH = Math.ceil((radius * 2) / 3) + 2;
+export type SimpleShapeKind = 'circle' | 'heart';
+
+function clampRadius(radius: number): number {
+  const r = Math.round(Number(radius));
+  return Number.isFinite(r) && r > 0 ? r : 1;
+}
+
+function clampSides(sides: number): number {
+  const n = Math.round(Number(sides));
+  return Number.isFinite(n) && n >= 3 ? n : 3;
+}
+
+export function generateSimpleShape(kind: SimpleShapeKind, radius: number): GraphicResult {
+  const r = clampRadius(radius);
+  const span = kind === 'heart' ? r * 2.2 : r * 2;
+  const cellsW = Math.ceil(span / 2) + 2;
+  const cellsH = Math.ceil(span / 3) + 2;
   const canvas = new GraphicCanvas(cellsW, cellsH);
-  canvas.drawPolygon(cellsW, cellsH * 1.5, radius, sides, angle);
-  
+  const cx = cellsW;
+  const cy = cellsH * 1.5;
+  if (kind === 'circle') {
+    canvas.drawCircle(cx, cy, r);
+  } else {
+    canvas.drawHeart(cx, cy, r);
+  }
+  const label = kind === 'circle' ? 'Circle' : 'Heart';
   return {
     brf: canvas.renderToBRF(),
-    summary: `Polygon with ${sides} sides`
+    summary: `${label} (size ${r})`,
+  };
+}
+
+export function generatePolygon(radius: number, sides: number, angle: number): GraphicResult {
+  const r = clampRadius(radius);
+  const n = clampSides(sides);
+  const cellsW = Math.ceil((r * 2) / 2) + 2;
+  const cellsH = Math.ceil((r * 2) / 3) + 2;
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawPolygon(cellsW, cellsH * 1.5, r, n, angle);
+
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Polygon with ${n} sides (size ${r})`,
   };
 }
