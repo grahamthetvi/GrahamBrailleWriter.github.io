@@ -8,7 +8,9 @@ import {
   generateBase10,
   generateManipulatives,
   generatePolygon,
-  type GraphicResult
+  generateSimpleShape,
+  type GraphicResult,
+  type SimpleShapeKind
 } from '../utils/graphicBraille';
 
 interface GraphicGeneratorModalProps {
@@ -18,7 +20,15 @@ interface GraphicGeneratorModalProps {
   onClose: () => void;
 }
 
-type GraphicType = 'clock' | 'fraction' | 'numberLine' | 'base10' | 'manipulatives' | 'polygon' | 'chart';
+type GraphicType =
+  | 'clock'
+  | 'fraction'
+  | 'numberLine'
+  | 'base10'
+  | 'manipulatives'
+  | 'simpleShape'
+  | 'polygon'
+  | 'chart';
 
 export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, onClose }: GraphicGeneratorModalProps) {
   const [graphicType, setGraphicType] = useState<GraphicType>('clock');
@@ -51,6 +61,10 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
   const [manCols, setManCols] = useState(3);
   const [manSpacing, setManSpacing] = useState(5);
 
+  // Preset shapes (circle, heart) — size is radius in braille dots (same unit as polygon)
+  const [presetShape, setPresetShape] = useState<SimpleShapeKind>('circle');
+  const [presetSize, setPresetSize] = useState(15);
+
   // Polygon state
   const [polyRadius, setPolyRadius] = useState(15);
   const [polySides, setPolySides] = useState(3);
@@ -75,6 +89,9 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
       case 'manipulatives':
         result = generateManipulatives(manRows, manCols, manSpacing);
         break;
+      case 'simpleShape':
+        result = generateSimpleShape(presetShape, presetSize);
+        break;
       case 'polygon':
         result = generatePolygon(polyRadius, polySides, polyAngle);
         break;
@@ -87,6 +104,7 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
     nlLength, nlStart, nlEnd, nlStep, nlVertical,
     b10Hundreds, b10Tens, b10Ones,
     manRows, manCols, manSpacing,
+    presetShape, presetSize,
     polyRadius, polySides, polyAngle
   ]);
 
@@ -112,14 +130,27 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
           <div style={{ width: '200px', borderRight: '1px solid var(--border-color)', padding: '1rem' }}>
             <h3 style={{ marginTop: 0 }}>Graphic Type</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {(['clock', 'fraction', 'numberLine', 'base10', 'manipulatives', 'polygon', 'chart'] as GraphicType[]).map(type => (
+              {(
+                [
+                  'clock',
+                  'fraction',
+                  'numberLine',
+                  'base10',
+                  'manipulatives',
+                  'simpleShape',
+                  'polygon',
+                  'chart'
+                ] as GraphicType[]
+              ).map(type => (
                 <button
                   key={type}
                   className={`toolbar-btn ${graphicType === type ? 'toolbar-btn--active' : ''}`}
                   onClick={() => setGraphicType(type)}
                   style={{ textAlign: 'left', textTransform: 'capitalize' }}
                 >
-                  {type.replace(/([A-Z])/g, ' $1').trim()}
+                  {type === 'simpleShape'
+                    ? 'Circle / heart'
+                    : type.replace(/([A-Z])/g, ' $1').trim()}
                 </button>
               ))}
             </div>
@@ -179,11 +210,42 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   <label>Spacing: <input type="number" value={manSpacing} onChange={e => setManSpacing(Number(e.target.value))} /></label>
                 </>
               )}
+              {graphicType === 'simpleShape' && (
+                <>
+                  <label style={{ gridColumn: '1 / -1' }}>
+                    Shape:{' '}
+                    <select
+                      value={presetShape}
+                      onChange={e => setPresetShape(e.target.value as SimpleShapeKind)}
+                    >
+                      <option value="circle">Circle</option>
+                      <option value="heart">Heart</option>
+                    </select>
+                  </label>
+                  <label>
+                    Size (radius in dots):{' '}
+                    <input
+                      type="number"
+                      min={1}
+                      value={presetSize}
+                      onChange={e => setPresetSize(Number(e.target.value))}
+                    />
+                  </label>
+                </>
+              )}
               {graphicType === 'polygon' && (
                 <>
-                  <label>Radius: <input type="number" value={polyRadius} onChange={e => setPolyRadius(Number(e.target.value))} /></label>
-                  <label>Sides: <input type="number" value={polySides} onChange={e => setPolySides(Number(e.target.value))} /></label>
-                  <label>Angle: <input type="number" value={polyAngle} onChange={e => setPolyAngle(Number(e.target.value))} /></label>
+                  <label>
+                    Size (radius in dots):{' '}
+                    <input
+                      type="number"
+                      min={1}
+                      value={polyRadius}
+                      onChange={e => setPolyRadius(Number(e.target.value))}
+                    />
+                  </label>
+                  <label>Sides: <input type="number" min={3} value={polySides} onChange={e => setPolySides(Number(e.target.value))} /></label>
+                  <label>Rotation (degrees): <input type="number" value={polyAngle} onChange={e => setPolyAngle(Number(e.target.value))} /></label>
                 </>
               )}
             </div>
