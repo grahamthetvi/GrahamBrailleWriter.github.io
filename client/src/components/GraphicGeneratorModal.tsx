@@ -64,11 +64,16 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
   // Preset shapes (circle, heart) — size is radius in braille dots (same unit as polygon)
   const [presetShape, setPresetShape] = useState<SimpleShapeKind>('circle');
   const [presetSize, setPresetSize] = useState(15);
+<<<<<<< cursor/simple-shapes-size-9b01
+  const [presetFilled, setPresetFilled] = useState(false);
+=======
+>>>>>>> main
 
   // Polygon state
   const [polyRadius, setPolyRadius] = useState(15);
   const [polySides, setPolySides] = useState(3);
   const [polyAngle, setPolyAngle] = useState(0);
+  const [polyFilled, setPolyFilled] = useState(false);
 
   useEffect(() => {
     if (graphicType === 'chart') return;
@@ -90,10 +95,14 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
         result = generateManipulatives(manRows, manCols, manSpacing);
         break;
       case 'simpleShape':
+<<<<<<< cursor/simple-shapes-size-9b01
+        result = generateSimpleShape(presetShape, presetSize, presetFilled);
+=======
         result = generateSimpleShape(presetShape, presetSize);
+>>>>>>> main
         break;
       case 'polygon':
-        result = generatePolygon(polyRadius, polySides, polyAngle);
+        result = generatePolygon(polyRadius, polySides, polyAngle, polyFilled);
         break;
     }
     setPreview(result);
@@ -104,8 +113,13 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
     nlLength, nlStart, nlEnd, nlStep, nlVertical,
     b10Hundreds, b10Tens, b10Ones,
     manRows, manCols, manSpacing,
+<<<<<<< cursor/simple-shapes-size-9b01
+    presetShape, presetSize, presetFilled,
+    polyRadius, polySides, polyAngle, polyFilled
+=======
     presetShape, presetSize,
     polyRadius, polySides, polyAngle
+>>>>>>> main
   ]);
 
   const handleInsert = () => {
@@ -231,6 +245,17 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                       onChange={e => setPresetSize(Number(e.target.value))}
                     />
                   </label>
+<<<<<<< cursor/simple-shapes-size-9b01
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={presetFilled}
+                      onChange={e => setPresetFilled(e.target.checked)}
+                    />{' '}
+                    Filled (solid)
+                  </label>
+=======
+>>>>>>> main
                 </>
               )}
               {graphicType === 'polygon' && (
@@ -246,6 +271,17 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   </label>
                   <label>Sides: <input type="number" min={3} value={polySides} onChange={e => setPolySides(Number(e.target.value))} /></label>
                   <label>Rotation (degrees): <input type="number" value={polyAngle} onChange={e => setPolyAngle(Number(e.target.value))} /></label>
+<<<<<<< cursor/simple-shapes-size-9b01
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={polyFilled}
+                      onChange={e => setPolyFilled(e.target.checked)}
+                    />{' '}
+                    Filled (solid)
+                  </label>
+=======
+>>>>>>> main
                 </>
               )}
             </div>
